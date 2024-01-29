@@ -1,6 +1,8 @@
-#pragma once
-#include <vmmlib/vector.hpp>
-using namespace vmml;
+#ifndef PLANT_GENERATION_H
+#define PLANT_GENERATION_H
+
+#include <glm/vec3.hpp>
+using namespace glm;
 
 /// <summary>
 /// Enumeration for types of nodes in the graph, 
@@ -21,9 +23,9 @@ class Node {
 public:
 	int level;
 	NodeType type;
-	vec3f localPosition;
-	vec3f eulerRotation;
-	Node(int lv, NodeType tp, vec3f lp, vec3f er) {
+	vec3 localPosition;
+	vec3 eulerRotation;
+	Node(int lv, NodeType tp, vec3 lp, vec3 er) {
 		level = lv;
 		type = tp;
 		localPosition = lp;
@@ -54,3 +56,5 @@ struct Plant {
 	float ExtinctionRate; // The probability that a given bud will die during a single growth cycle.
 	float GrowthRate; // The number of internodes generated on a single shoot during one growth cycle.
 };
+
+#endif
