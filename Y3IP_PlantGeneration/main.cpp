@@ -1,5 +1,5 @@
 #include "Mesh.h"
-#include "Bezier.h"
+#include "Curve.h"
 #include "PlantGeneration.h"
 
 // Some variables for tweaking the program
@@ -7,13 +7,13 @@
 #define WINDOW_WIDTH 800
 #define WINDOW_HEIGHT 800
 #define FOV_RADIANS 45.0f
-#define WIREFRAME false
+#define WIREFRAME true
 
 // TEMPORARY
 
 // Vertices coordinates
 Vertex vertices[] =
-{ //               COORDINATES           /            COLORS          /           NORMALS         /       TEXTURE COORDINATES    //
+{ //               COORDINATES           /           NORMALS         /            COLORS          /       TEXTURE COORDINATES    //
 	Vertex{glm::vec3(-1.0f, 0.0f,  1.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(0.0f, 0.0f)},
 	Vertex{glm::vec3(-1.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(0.0f, 1.0f)},
 	Vertex{glm::vec3(1.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(1.0f, 1.0f)},
@@ -77,6 +77,13 @@ int main()
 		glm::vec3(0, 1, -5),
 		glm::vec3(-1, -1, 1));
 
+	// Create a Curve
+	Curve curve = Curve(CURVE_SUBDIVISIONS,
+		glm::vec3(-1, 1, 0),
+		glm::vec3(2, -1, 1),
+		glm::vec3(0, 1, -5),
+		glm::vec3(-1, -1, 1));
+
 	// Get the matrix for where we want to place the mesh
 	glm::vec3 objectPos = glm::vec3(0.0f, 0.0f, 0.0f);
 	glm::mat4 objectModel = glm::mat4(1.0f);
@@ -115,9 +122,11 @@ int main()
 			prevTime = currentTime;
 		}
 
-		mesh.Draw(shaderProgram, camera);
+		//mesh.Draw(shaderProgram, camera);
 
 		bezier.Draw(shaderProgram, camera);
+
+		curve.Draw(shaderProgram, camera);
 
 		// Swap back buffer with front buffer
 		glfwSwapBuffers(window);

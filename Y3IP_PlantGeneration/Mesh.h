@@ -9,6 +9,12 @@
 #include "Camera.h"
 #include "Texture.h"
 
+struct MeshData {
+	std::vector <Vertex> vertices;
+	std::vector <GLuint> indices;
+	std::vector <Texture> textures;
+};
+
 class Mesh
 {
 public:
@@ -20,6 +26,7 @@ public:
 
 	// Initializes the mesh
 	Mesh(std::vector <Vertex>& vertices, std::vector <GLuint>& indices, std::vector <Texture>& textures);
+	Mesh(MeshData data) : Mesh(data.vertices, data.indices, data.textures) {}
 
 	// Draws the mesh
 	void Draw(Shader& shader, Camera& camera);
