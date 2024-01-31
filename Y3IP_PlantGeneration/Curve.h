@@ -6,17 +6,18 @@
 #include <vector>
 
 // Refers to how many vertices will represent the circumference of each segment
-#define CURVE_SUBDIVISIONS 12
+#define CURVE_SUBDIVISIONS 16
+#define CURVE_WIDTH 0.1f
 
 // Not to be confused with Bezier Curves
 
 // A 3D cylindrical representation of a Bezier Curve.
-class Curve : public Mesh {
-public:
-	Curve(int aSubdivisions, glm::vec3 a, glm::vec3 b, glm::vec3 c1, glm::vec3 c2) : Mesh(calculateMesh(aSubdivisions, a, b, c1, c2)), bezierCurve(a, b, c1, c2) {}
+class Curve : public Bezier, public Mesh {
 private:
-	Bezier bezierCurve;
 	MeshData calculateMesh(int aSubdivisions, glm::vec3 a, glm::vec3 b, glm::vec3 c1, glm::vec3 c2);
+public:
+	Curve(int aSubdivisions, glm::vec3 a, glm::vec3 b, glm::vec3 c1, glm::vec3 c2) : Bezier(a, b, c1, c2), Mesh(calculateMesh(aSubdivisions, a, b, c1, c2)){}
+	using Mesh::Draw; // To prevent ambiguity of Bezier's Draw // TODO : This could rename it to DrawBezier so both are accessible
 };
 
 #endif

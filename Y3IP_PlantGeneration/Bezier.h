@@ -6,7 +6,7 @@
 #include "EBO.h"
 #include "Camera.h"
 
-#define BEZIER_DETAIL 16
+#define BEZIER_DETAIL 32
 
 class Bezier 
 {
@@ -19,6 +19,7 @@ public:
     // Draws the curve
     void Draw(Shader& shader, Camera& camera);
     void SetDetail(int detail);
+    int GetDetail() const { return detail; }
 private:
     glm::vec3 A;  // Start value
     glm::vec3 B;  // Ending value
