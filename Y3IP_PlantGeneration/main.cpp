@@ -1,4 +1,5 @@
 #include "Mesh.h"
+#include "Bezier.h"
 #include "PlantGeneration.h"
 
 // Some variables for tweaking the program
@@ -6,7 +7,7 @@
 #define WINDOW_WIDTH 800
 #define WINDOW_HEIGHT 800
 #define FOV_RADIANS 45.0f
-#define WIREFRAME true
+#define WIREFRAME false
 
 // TEMPORARY
 
@@ -70,6 +71,12 @@ int main()
 	// Create Mesh
 	Mesh mesh(verts, ind, tex);
 
+	// Create Bezier
+	Bezier bezier = Bezier(glm::vec3(-1, 1, 0),
+		glm::vec3(2, -1, 1),
+		glm::vec3(0, 1, -5),
+		glm::vec3(-1, -1, 1));
+
 	// Get the matrix for where we want to place the mesh
 	glm::vec3 objectPos = glm::vec3(0.0f, 0.0f, 0.0f);
 	glm::mat4 objectModel = glm::mat4(1.0f);
@@ -86,7 +93,7 @@ int main()
 	glEnable(GL_DEPTH_TEST);
 	if (WIREFRAME) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
-	Camera camera(WINDOW_WIDTH, WINDOW_HEIGHT, glm::vec3(0.0f, 0.0f, 2.0f));
+	Camera camera(WINDOW_WIDTH, WINDOW_HEIGHT, glm::vec3(0.0f, 1.0f, 0.0f));
 
 	while (!glfwWindowShouldClose(window)) 
 	{
@@ -109,6 +116,8 @@ int main()
 		}
 
 		mesh.Draw(shaderProgram, camera);
+
+		bezier.Draw(shaderProgram, camera);
 
 		// Swap back buffer with front buffer
 		glfwSwapBuffers(window);

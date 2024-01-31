@@ -16,5 +16,6 @@ uniform vec3 camPos;
 void main()
 {
 	//FragColor = vec4(color, 1.0f);
-	FragColor = texture(diffuse0, texCoord);
+	//FragColor = texture(diffuse0, texCoord);
+	FragColor = vec4(0.0f, 1.0f, 0.0f, 1.0f);
 }

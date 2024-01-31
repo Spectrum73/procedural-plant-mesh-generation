@@ -18,6 +18,7 @@ class VBO
 public:
 	GLuint ID;
 	VBO(std::vector<Vertex>& vertices);
+	VBO(std::vector<glm::vec3>& vertices);
 
 	void Bind();
 	void Unbind();
