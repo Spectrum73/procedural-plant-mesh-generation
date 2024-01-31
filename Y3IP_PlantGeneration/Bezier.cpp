@@ -1,19 +1,52 @@
 #include "Bezier.h"
 
+// Changes the number of lines used for the curve, detail must be > 0
+void Bezier::SetDetail(int dtl) 
+{
+	if (dtl <= 0) return;
+	detail = detail;
+
+	VAO.Bind();
+	std::vector <glm::vec3> vertices = { A };
+	std::vector <GLuint> indices = { };
+	GLuint lastIndex = 0;
+
+	// This is the loop where we add lines to represent the curve (except the start and end points
+	for (GLuint i = 1; i < (detail); i++)
+	{
+		// Push an edge onto the index list
+		indices.push_back(lastIndex);
+		indices.push_back(i);
+
+		// Add the vertex for the line at the point we want
+		vertices.push_back(Evaluate((float)i/(float)detail));
+
+		lastIndex = i;
+	}
+
+	// Push the last edge (outside of loop as we don't want to add any more vertices)
+	indices.push_back(lastIndex);
+	indices.push_back(lastIndex+1);
+	vertices.push_back(B);
+	EBO EBO(indices);
+
+	// Generates Vertex Buffer Object and links it to vertices
+	VBO VBO(vertices);
+	VAO.LinkAttrib(VBO, 0, 3, GL_FLOAT, sizeof(glm::vec3), (void*)0);					 // Positions
+	// Unbind all to prevent accidentally modifying them
+	VAO.Unbind();
+	VBO.Unbind();
+	EBO.Unbind();
+}
+
 Bezier::Bezier(glm::vec3 a, glm::vec3 b, glm::vec3 c1, glm::vec3 c2) {
 	A = a;
 	B = b;
 	C1 = c1;
 	C2 = c2;
 
-	VAO.Bind();
-	std::vector <glm::vec3> points = { A, B };
-	// Generates Vertex Buffer Object and links it to vertices
-	VBO VBO(points);
-	VAO.LinkAttrib(VBO, 0, 3, GL_FLOAT, sizeof(points), (void*)0);					 // Positions
-	// Unbind all to prevent accidentally modifying them
-	VAO.Unbind();
-	VBO.Unbind();
+	// Generate the curve's vertices
+	SetDetail(detail);
 }
 
 /// <summary>
@@ -42,5 +75,6 @@ void Bezier::Draw(Shader& shader, Camera& camera)
 	camera.Matrix(shader, "camMatrix");
 
 	// Draw the actual mesh
-	glDrawElements(GL_LINES, 2, GL_UNSIGNED_INT, 0);
+	glDrawElements(GL_LINES, detail*2, GL_UNSIGNED_INT, 0);
+	//glDrawArrays(GL_LINES, 0, detail*2);
 }
