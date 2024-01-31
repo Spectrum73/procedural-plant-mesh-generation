@@ -1,12 +1,15 @@
 #include "Mesh.h"
+#include "Bezier.h"
 #include "PlantGeneration.h"
+#include <Windows.h>
+#include <gl/GL.h>
 
 // Some variables for tweaking the program
 #define WINDOW_NAME "Mesh Viewport"
 #define WINDOW_WIDTH 800
 #define WINDOW_HEIGHT 800
 #define FOV_RADIANS 45.0f
-#define WIREFRAME true
+#define WIREFRAME false
 
 // TEMPORARY
 
@@ -70,6 +73,12 @@ int main()
 	// Create Mesh
 	Mesh mesh(verts, ind, tex);
 
+	// Create Bezier
+	Bezier bezier = Bezier(glm::vec3(-100, 100, 0),
+		glm::vec3(200, -100, 100),
+		glm::vec3(0, 100, -500),
+		glm::vec3(-100, -100, 100));
+
 	// Get the matrix for where we want to place the mesh
 	glm::vec3 objectPos = glm::vec3(0.0f, 0.0f, 0.0f);
 	glm::mat4 objectModel = glm::mat4(1.0f);
@@ -86,7 +95,27 @@ int main()
 	glEnable(GL_DEPTH_TEST);
 	if (WIREFRAME) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
-	Camera camera(WINDOW_WIDTH, WINDOW_HEIGHT, glm::vec3(0.0f, 0.0f, 2.0f));
+	Camera camera(WINDOW_WIDTH, WINDOW_HEIGHT, glm::vec3(0.0f, 1.0f, 0.0f));
+
+	/// TEMPORARY
+	
+	VAO lineVAO;
+	lineVAO.Bind();
+	// Generates Vertex Buffer Object and links it to vertices
+	VBO VBO(verts);
+	// Generates Element Buffer Object and links it to indices
+	EBO EBO(ind);
+	// Links VBO attributes such as coordinates and colors to VAO
+	lineVAO.LinkAttrib(VBO, 0, 3, GL_FLOAT, sizeof(Vertex), (void*)0);					 // Positions
+	lineVAO.LinkAttrib(VBO, 1, 3, GL_FLOAT, sizeof(Vertex), (void*)(3 * sizeof(float))); // Normals
+	lineVAO.LinkAttrib(VBO, 2, 3, GL_FLOAT, sizeof(Vertex), (void*)(6 * sizeof(float))); // Colours
+	lineVAO.LinkAttrib(VBO, 3, 2, GL_FLOAT, sizeof(Vertex), (void*)(9 * sizeof(float))); // TexCoords
+	// Unbind all to prevent accidentally modifying them
+	lineVAO.Unbind();
+	VBO.Unbind();
+	EBO.Unbind();
+
+	/// TEMPORARY
 
 	while (!glfwWindowShouldClose(window)) 
 	{
@@ -109,6 +138,8 @@ int main()
 		}
 
 		mesh.Draw(shaderProgram, camera);
+
+		bezier.Draw(shaderProgram, camera);
 
 		// Swap back buffer with front buffer
 		glfwSwapBuffers(window);
