@@ -1,10 +1,10 @@
 #include "Bezier.h"
 
-// Changes the number of lines used for the curve, detail must be > 0
-void Bezier::SetDetail(int dtl) 
+// Changes the number of edges used for the curve, detail must be > 0
+void Bezier::SetEdges(int aEdges) 
 {
-	if (dtl <= 0) return;
-	detail = detail;
+	if (aEdges < 0) return;
+	edges = aEdges;
 
 	VAO.Bind();
 	std::vector <glm::vec3> vertices = { A };
@@ -12,14 +12,14 @@ void Bezier::SetDetail(int dtl)
 	GLuint lastIndex = 0;
 
 	// This is the loop where we add lines to represent the curve (except the start and end points
-	for (GLuint i = 1; i < (detail); i++)
+	for (GLuint i = 1; i < (edges); i++)
 	{
 		// Push an edge onto the index list
 		indices.push_back(lastIndex);
 		indices.push_back(i);
 
 		// Add the vertex for the line at the point we want
-		vertices.push_back(Evaluate((float)i/(float)detail));
+		vertices.push_back(Evaluate((float)i/(float)edges));
 
 		lastIndex = i;
 	}
@@ -39,14 +39,14 @@ void Bezier::SetDetail(int dtl)
 	EBO.Unbind();
 }
 
-Bezier::Bezier(glm::vec3 a, glm::vec3 b, glm::vec3 c1, glm::vec3 c2) {
+Bezier::Bezier(int aEdges, glm::vec3 a, glm::vec3 b, glm::vec3 c1, glm::vec3 c2) {
 	A = a;
 	B = b;
 	C1 = c1;
 	C2 = c2;
 
 	// Generate the curve's vertices
-	SetDetail(detail);
+	SetEdges(aEdges);
 }
 
 /// <summary>
@@ -64,7 +64,12 @@ glm::vec3 Bezier::Evaluate(float t) {
 		B * powf(t, 3);
 }
 
-void Bezier::Draw(Shader& shader, Camera& camera)
+/// <summary>
+/// Displays the edges of the Bezier Curve.
+/// </summary>
+/// <param name="shader"></param>
+/// <param name="camera"></param>
+void Bezier::DrawBezier(Shader& shader, Camera& camera)
 {
 	// Bind shader to be able to access uniforms
 	shader.Activate();
@@ -75,6 +80,6 @@ void Bezier::Draw(Shader& shader, Camera& camera)
 	camera.Matrix(shader, "camMatrix");
 
 	// Draw the actual mesh
-	glDrawElements(GL_LINES, detail*2, GL_UNSIGNED_INT, 0);
+	glDrawElements(GL_LINES, edges*2, GL_UNSIGNED_INT, 0);
 	//glDrawArrays(GL_LINES, 0, detail*2);
 }

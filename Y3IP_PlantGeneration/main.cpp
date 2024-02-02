@@ -72,17 +72,25 @@ int main()
 	Mesh mesh(verts, ind, tex);
 
 	// Create Bezier
-	Bezier bezier = Bezier(glm::vec3(-1, 1, 0),
+	Bezier bezier = Bezier(BEZIER_DEFAULT_EDGES,
+		glm::vec3(-1, 1, 0),
 		glm::vec3(2, -1, 1),
 		glm::vec3(0, 1, -5),
 		glm::vec3(-1, -1, 1));
 
 	// Create a Curve
-	Curve curve = Curve(CURVE_SUBDIVISIONS,
+	Curve curve = Curve(CURVE_SUBDIVISIONS, BEZIER_DEFAULT_EDGES,
 		glm::vec3(-1, 1, 0),
 		glm::vec3(2, -1, 1),
 		glm::vec3(0, 1, -5),
 		glm::vec3(-1, -1, 1));
+
+	// Create another curve
+	Curve curve2 = Curve(3, 64,
+		glm::vec3(1, -1, -1),
+		glm::vec3(-1, 1, -5),
+		glm::vec3(2, 1, 1),
+		glm::vec3(1, 1, 0));
 
 	// Get the matrix for where we want to place the mesh
 	glm::vec3 objectPos = glm::vec3(0.0f, 0.0f, 0.0f);
@@ -124,9 +132,10 @@ int main()
 
 		//mesh.Draw(shaderProgram, camera);
 
-		bezier.Draw(shaderProgram, camera);
+		bezier.DrawBezier(shaderProgram, camera);
 
 		curve.Draw(shaderProgram, camera);
+		curve2.Draw(shaderProgram, camera);
 
 		// Swap back buffer with front buffer
 		glfwSwapBuffers(window);

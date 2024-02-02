@@ -16,7 +16,7 @@ class Curve : public Bezier, public Mesh {
 private:
 	MeshData calculateMesh(int aSubdivisions, glm::vec3 a, glm::vec3 b, glm::vec3 c1, glm::vec3 c2);
 public:
-	Curve(int aSubdivisions, glm::vec3 a, glm::vec3 b, glm::vec3 c1, glm::vec3 c2) : Bezier(a, b, c1, c2), Mesh(calculateMesh(aSubdivisions, a, b, c1, c2)){}
+	Curve(int aSubdivisions, int aSegments, glm::vec3 a, glm::vec3 b, glm::vec3 c1, glm::vec3 c2) : Bezier(aSegments, a, b, c1, c2), Mesh(calculateMesh(aSubdivisions, a, b, c1, c2)){}
 	using Mesh::Draw; // To prevent ambiguity of Bezier's Draw // TODO : This could rename it to DrawBezier so both are accessible
 };
 
