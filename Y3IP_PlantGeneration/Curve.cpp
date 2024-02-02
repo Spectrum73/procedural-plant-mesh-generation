@@ -48,7 +48,8 @@ MeshData Curve::calculateMesh(int aSubdivisions, glm::vec3 a, glm::vec3 b, glm::
 
 				// Add the vertices for the ring 
 				// They are first rotated to look at the next ring on the curve, then translated to the appropriate start position.
-				vertices.push_back(Vertex{ glm::vec3(ringRotation * glm::vec4((glm::vec3(x * CURVE_WIDTH, y * CURVE_WIDTH, 0.0f)), 0.0f)) + startPosition, glm::vec3(ringRotation * glm::vec4((glm::vec3(x * CURVE_WIDTH, y * CURVE_WIDTH, 0.0f)), 0.0f)), glm::vec3(0.0f), glm::vec2(0.0f)});
+				glm::vec3 vert_dir = glm::vec3(ringRotation * glm::vec4((glm::vec3(x * CURVE_WIDTH, y * CURVE_WIDTH, 0.0f)), 0.0f));
+				vertices.push_back(Vertex{ vert_dir + startPosition, glm::normalize(vert_dir), glm::vec3((float)ringIndex / (float)(nbRings - 1)), glm::vec2((float)ringIndex / (float)(nbRings - 1))});
 
 				// Add the indices (face representations) for the segment.
 				// We do not create faces on the first loop as we only have 1 vertex

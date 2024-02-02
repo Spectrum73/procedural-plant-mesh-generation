@@ -7,7 +7,7 @@
 #define WINDOW_WIDTH 800
 #define WINDOW_HEIGHT 800
 #define FOV_RADIANS 45.0f
-#define WIREFRAME true
+#define WIREFRAME false
 
 // TEMPORARY
 
@@ -25,6 +25,34 @@ GLuint indices[] =
 {
 	0, 1, 2,
 	0, 2, 3
+};
+
+Vertex lightVertices[] =
+{ //     COORDINATES     //
+	Vertex{glm::vec3(-0.1f, -0.1f,  0.1f)},
+	Vertex{glm::vec3(-0.1f, -0.1f, -0.1f)},
+	Vertex{glm::vec3(0.1f, -0.1f, -0.1f)},
+	Vertex{glm::vec3(0.1f, -0.1f,  0.1f)},
+	Vertex{glm::vec3(-0.1f,  0.1f,  0.1f)},
+	Vertex{glm::vec3(-0.1f,  0.1f, -0.1f)},
+	Vertex{glm::vec3(0.1f,  0.1f, -0.1f)},
+	Vertex{glm::vec3(0.1f,  0.1f,  0.1f)}
+};
+
+GLuint lightIndices[] =
+{
+	0, 1, 2,
+	0, 2, 3,
+	0, 4, 7,
+	0, 7, 3,
+	3, 7, 6,
+	3, 6, 2,
+	2, 6, 5,
+	2, 5, 1,
+	1, 5, 4,
+	1, 4, 0,
+	4, 5, 6,
+	4, 6, 7
 };
 
 // /TEMPORARY
@@ -64,12 +92,21 @@ int main()
 	
 	// Generates Shader object using shaders defualt.vert and default.frag
 	Shader shaderProgram("default.vert", "default.frag");
+	// Shader for light (to display an object where it's coming from)
+	Shader lightShader("light.vert", "light.frag");
+
 	// Store Mesh Data
 	std::vector <Vertex> verts(vertices, vertices + sizeof(vertices) / sizeof(Vertex));
 	std::vector <GLuint> ind(indices, indices + sizeof(indices) / sizeof(GLuint));
 	std::vector <Texture> tex(textures, textures + sizeof(textures) / sizeof(Texture));
 	// Create Mesh
 	Mesh mesh(verts, ind, tex);
+
+	// Store mesh data in vectors for the mesh
+	std::vector <Vertex> lightVerts(lightVertices, lightVertices + sizeof(lightVertices) / sizeof(Vertex));
+	std::vector <GLuint> lightInd(lightIndices, lightIndices + sizeof(lightIndices) / sizeof(GLuint));
+	// Create light mesh
+	Mesh light(lightVerts, lightInd, tex);
 
 	// Create Bezier
 	Bezier bezier = Bezier(BEZIER_DEFAULT_EDGES,
@@ -86,20 +123,31 @@ int main()
 		glm::vec3(-1, -1, 1));
 
 	// Create another curve
-	Curve curve2 = Curve(3, 64,
+	Curve curve2 = Curve(5, 64,
 		glm::vec3(1, -1, -1),
 		glm::vec3(-1, 1, -5),
 		glm::vec3(2, 1, 1),
 		glm::vec3(1, 1, 0));
 
-	// Get the matrix for where we want to place the mesh
+	// Get the matrix for where we want to place the meshes
 	glm::vec3 objectPos = glm::vec3(0.0f, 0.0f, 0.0f);
 	glm::mat4 objectModel = glm::mat4(1.0f);
 	objectModel = glm::translate(objectModel, objectPos);
 
-	// Bind the uniform for the mesh's position
+	glm::vec4 lightColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+	glm::vec3 lightPos = glm::vec3(0.5f, 0.5f, -1.5f);
+	glm::mat4 lightModel = glm::mat4(1.0f);
+	lightModel = glm::translate(lightModel, lightPos);
+
+	// Bind uniforms for the light shader
+	lightShader.Activate();
+	glUniformMatrix4fv(glGetUniformLocation(lightShader.ID, "model"), 1, GL_FALSE, glm::value_ptr(lightModel));
+	glUniform4f(glGetUniformLocation(lightShader.ID, "lightColor"), lightColor.x, lightColor.y, lightColor.z, lightColor.w);
+	// Bind the uniforms for the mesh
 	shaderProgram.Activate();
 	glUniformMatrix4fv(glGetUniformLocation(shaderProgram.ID, "model"), 1, GL_FALSE, glm::value_ptr(objectModel));
+	glUniform4f(glGetUniformLocation(shaderProgram.ID, "lightColor"), lightColor.x, lightColor.y, lightColor.z, lightColor.w);
+	glUniform3f(glGetUniformLocation(shaderProgram.ID, "lightPos"), lightPos.x, lightPos.y, lightPos.z);
 
 	float rotation = 0.0f;
 	double prevTime = glfwGetTime();
@@ -130,12 +178,14 @@ int main()
 			prevTime = currentTime;
 		}
 
-		//mesh.Draw(shaderProgram, camera);
+		mesh.Draw(shaderProgram, camera);
 
 		bezier.DrawBezier(shaderProgram, camera);
 
 		curve.Draw(shaderProgram, camera);
 		curve2.Draw(shaderProgram, camera);
+
+		light.Draw(lightShader, camera);
 
 		// Swap back buffer with front buffer
 		glfwSwapBuffers(window);
@@ -144,7 +194,7 @@ int main()
 
 	// Clean up objects we've made
 	shaderProgram.Delete();
-
+	lightShader.Delete();
 	// Delete window and terminate GLFW before ending the program
 	glfwDestroyWindow(window);
 	glfwTerminate();
