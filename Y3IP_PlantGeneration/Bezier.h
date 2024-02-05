@@ -19,7 +19,9 @@ public:
     // Draws the curve (Named DrawBezier so it isn't confused with Draw() from Mesh when inherited in Curve)
     void DrawBezier(Shader& shader, Camera& camera);
     void SetEdges(int detail);
-    int GetEdges() const { return edges; }
+    int getEdges() const { return edges; }
+    glm::vec3& getPoint(int index) { return (index == 0 ? A : B); }
+    glm::vec3& getControlPoint(int index) { return (index == 0 ? C1 : C2); }
 private:
     glm::vec3 A;  // Start value
     glm::vec3 B;  // Ending value

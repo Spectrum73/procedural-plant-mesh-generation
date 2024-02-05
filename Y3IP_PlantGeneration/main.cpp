@@ -116,14 +116,11 @@ int main()
 		glm::vec3(-1, -1, 1));
 
 	// Create a Curve
-	Curve curve = Curve(CURVE_SUBDIVISIONS, BEZIER_DEFAULT_EDGES,
-		glm::vec3(-1, 1, 0),
-		glm::vec3(2, -1, 1),
-		glm::vec3(0, 1, -5),
-		glm::vec3(-1, -1, 1));
+	Curve curve = Curve(CURVE_SUBDIVISIONS, BEZIER_DEFAULT_EDGES, 0.05f, 0.4f,
+		bezier);
 
 	// Create another curve
-	Curve curve2 = Curve(5, 64,
+	Curve curve2 = Curve(5, 64, 0.1f, 0.1f,
 		glm::vec3(1, -1, -1),
 		glm::vec3(-1, 1, -5),
 		glm::vec3(2, 1, 1),

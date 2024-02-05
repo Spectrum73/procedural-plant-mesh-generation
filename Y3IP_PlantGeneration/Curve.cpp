@@ -1,6 +1,6 @@
 #include "Curve.h"
 
-MeshData Curve::calculateMesh(int aSubdivisions, glm::vec3 a, glm::vec3 b, glm::vec3 c1, glm::vec3 c2)
+MeshData Curve::calculateMesh(int aSubdivisions, float startWidth, float endWidth, glm::vec3 a, glm::vec3 b, glm::vec3 c1, glm::vec3 c2)
 {
 	Texture textures[]
 	{
@@ -13,7 +13,7 @@ MeshData Curve::calculateMesh(int aSubdivisions, glm::vec3 a, glm::vec3 b, glm::
 
 	// Note: Rings refer to the loops on the path, Segments refer to the faces connecting the rings.
 
-	int nbRings = GetEdges()+1;
+	int nbRings = getEdges()+1;
 	const float angleStep = 2.0f * glm::pi<float>() / float(aSubdivisions);
 
 	// All Rings
@@ -22,7 +22,9 @@ MeshData Curve::calculateMesh(int aSubdivisions, glm::vec3 a, glm::vec3 b, glm::
 		// Note: The demonitator is (nbRings-1) rather than nbRings because we want to find the fraction based on edges rather than rings to
 		// ensure that the number of segments = the number of edges on the Bezier Curve. The same goes for some comparisons of ringIndex
 		// where to convert from index to the ring number we add 1.
-		glm::vec3 startPosition = Evaluate((float)ringIndex / (float)(nbRings-1));
+		// t is the normalized value for how far along the curve we are.
+		float t = (float)ringIndex / (float)(nbRings - 1);
+		glm::vec3 startPosition = Evaluate(t);
 		// If we are on the final ring there is no next ring, so we use the previous one instead
 		glm::vec3 endPosition =	(ringIndex+1 == nbRings) ? Evaluate((ringIndex-1) / (float)(nbRings-1)) : Evaluate((ringIndex+1) / (float)(nbRings-1));
 		glm::vec3 direction = glm::normalize(endPosition - startPosition);
@@ -48,7 +50,8 @@ MeshData Curve::calculateMesh(int aSubdivisions, glm::vec3 a, glm::vec3 b, glm::
 
 				// Add the vertices for the ring 
 				// They are first rotated to look at the next ring on the curve, then translated to the appropriate start position.
-				glm::vec3 vert_dir = glm::vec3(ringRotation * glm::vec4((glm::vec3(x * CURVE_WIDTH, y * CURVE_WIDTH, 0.0f)), 0.0f));
+				float width = t * endWidth + (1 - t) * startWidth;
+				glm::vec3 vert_dir = glm::vec3(ringRotation * glm::vec4((glm::vec3(x * width, y * width, 0.0f)), 0.0f));
 				vertices.push_back(Vertex{ vert_dir + startPosition, glm::normalize(vert_dir), glm::vec3((float)ringIndex / (float)(nbRings - 1)), glm::vec2((float)ringIndex / (float)(nbRings - 1))});
 
 				// Add the indices (face representations) for the segment.
