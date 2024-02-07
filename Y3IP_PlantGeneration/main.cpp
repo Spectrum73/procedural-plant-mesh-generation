@@ -126,6 +126,19 @@ int main()
 		glm::vec3(2, 1, 1),
 		glm::vec3(1, 1, 0));
 
+	Curve curve3 = Curve(5, 64, 0.3f, 0.06f,
+		glm::vec3(0, 0, 0),
+		glm::vec3(.2f, 2, .5f),
+		glm::vec3(.2f, 1, .4f),
+		glm::vec3(.4f, 1, .2f));
+
+	PlantParameters testParams;
+	testParams.ApicalBudExtinction = 0.05f;
+	testParams.GrowthRate = 0.9f;
+	Plant testPlant = Plant(testParams);
+	testPlant.GenerateGraph();
+	testPlant.GenerateMesh();
+
 	// Get the matrix for where we want to place the meshes
 	glm::vec3 objectPos = glm::vec3(0.0f, 0.0f, 0.0f);
 	glm::mat4 objectModel = glm::mat4(1.0f);
@@ -177,12 +190,15 @@ int main()
 
 		mesh.Draw(shaderProgram, camera);
 
-		bezier.DrawBezier(shaderProgram, camera);
+		//bezier.DrawBezier(shaderProgram, camera);
 
-		curve.Draw(shaderProgram, camera);
-		curve2.Draw(shaderProgram, camera);
+		//curve.Draw(shaderProgram, camera);
+		//curve2.Draw(shaderProgram, camera);
+		//curve3.Draw(shaderProgram, camera);
 
 		light.Draw(lightShader, camera);
+
+		testPlant.Draw(shaderProgram, camera);
 
 		// Swap back buffer with front buffer
 		glfwSwapBuffers(window);

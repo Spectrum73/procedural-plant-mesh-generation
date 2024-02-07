@@ -145,6 +145,8 @@
     <ClCompile Include="glad.c" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Mesh.cpp" />
+    <ClCompile Include="PlantGeneration.cpp" />
+    <ClCompile Include="RandomNumberGeneration.cpp" />
     <ClCompile Include="ShaderClass.cpp" />
     <ClCompile Include="stb.cpp" />
     <ClCompile Include="Texture.cpp" />
@@ -157,6 +159,7 @@
     <ClInclude Include="Curve.h" />
     <ClInclude Include="EBO.h" />
     <ClInclude Include="Mesh.h" />
+    <ClInclude Include="RandomNumberGeneration.h" />
     <ClInclude Include="ShaderClass.h" />
     <ClInclude Include="PlantGeneration.h" />
     <ClInclude Include="Texture.h" />

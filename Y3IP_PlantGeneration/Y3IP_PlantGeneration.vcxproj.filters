@@ -57,6 +57,12 @@
     <ClCompile Include="Curve.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="PlantGeneration.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="RandomNumberGeneration.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="PlantGeneration.h">
@@ -87,6 +93,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Curve.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="RandomNumberGeneration.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
