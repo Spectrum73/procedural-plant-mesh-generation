@@ -23,8 +23,10 @@ public:
     glm::vec3& getPoint(int index) { return (index == 0 ? A : B); }
     glm::vec3& getControlPoint(int index) { return (index == 0 ? C1 : C2); }
 private:
+    // World Space
     glm::vec3 A;  // Start value
     glm::vec3 B;  // Ending value
+    // Local Space (Relative to their respective points)
     glm::vec3 C1;  // First control value
     glm::vec3 C2;  // Second control value
     int edges = BEZIER_DEFAULT_EDGES;

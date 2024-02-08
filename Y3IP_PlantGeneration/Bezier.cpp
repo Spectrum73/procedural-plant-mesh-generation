@@ -59,8 +59,8 @@ glm::vec3 Bezier::Evaluate(float t) {
 	if (t < 0 || t > 1) return glm::vec3(0.0f);
 
 	return A * powf((1 - t), 3) +
-		(float)3 * C1 * powf((1 - t), 2) * t +
-		(float)3 * C2 * (1 - t) * powf(t, 2) +
+		(float)3 * (C1+A) * powf((1 - t), 2) * t +
+		(float)3 * (C2+B) * (1 - t) * powf(t, 2) +
 		B * powf(t, 3);
 }
 
