@@ -132,7 +132,7 @@ int main()
 		glm::vec3(.2f, 1, .4f),
 		glm::vec3(.4f, 1, .2f));
 
-	Curve basicCurve = Curve(8, 32, 0.1f, 0.1f,
+	Curve basicCurve = Curve(8, 6, 0.1f, 0.1f,
 		glm::vec3(0.0f, 0.0f, 0.0f),
 		glm::vec3(0.0f, 1.0f, 1.0f),
 		glm::vec3(0.0f, 0.5f, 0.0f),
@@ -141,8 +141,8 @@ int main()
 	PlantParameters testParams;
 	testParams.ApicalBudExtinction = 0.05f;
 	testParams.GrowthRate = 0.9f;
-	testParams.CircumferenceEdges = 8;
-	testParams.CurveSegments = 6;
+	testParams.CircumferenceEdges = 5;
+	testParams.CurveSegments = 3;
 	Plant testPlant = Plant(testParams);
 	testPlant.GenerateGraph();
 	testPlant.GenerateMesh();

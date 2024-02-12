@@ -26,11 +26,13 @@ MeshData Curve::calculateMesh(int aSubdivisions, float startWidth, float endWidt
 		float t = (float)ringIndex / (float)(nbRings - 1);
 		glm::vec3 startPosition = Evaluate(t);
 		// If we are on the final ring there is no next ring, so we use the previous one instead
-		glm::vec3 endPosition =	(ringIndex+1 == nbRings) ? Evaluate((ringIndex-1) / (float)(nbRings-1)) : Evaluate((ringIndex+1) / (float)(nbRings-1));
-		glm::vec3 direction = glm::normalize(endPosition - startPosition);
-		// Because if it's the final ring we use the previous one, we must also reverse the direction as to not be backwards
+		glm::vec3 endPosition =	Evaluate((ringIndex+1) / (float)(nbRings-1));
+		glm::vec3 direction;
+		// For the first and last rings we make them look towards the control points, this ensures consistent start/end points no matter the detail
+		if (ringIndex + 1 == nbRings) direction = -glm::normalize(c2);
+		else if (ringIndex == 0) direction = glm::normalize(c1);
 		// The aim of this is to copy the prior ring's rotation
-		if (ringIndex+1 == nbRings) direction = -direction;
+		else direction = glm::normalize(endPosition - startPosition);
 		// glm::lookAt is a function designed for cameras to use, due to how cameras work we must inverse this vector for it to work for regular positions.
 		auto ringRotation = glm::lookAt(glm::vec3(0.0f), direction, glm::vec3(0.0f, 0.0f, 1.0f));
 		ringRotation = glm::inverse(ringRotation);
