@@ -28,8 +28,8 @@ void GenerateInternode(Node* parent, float chanceDecay) {
 	if (dChance >= 1.0f) return;
 	std::cout << std::to_string(dChance) + " GROWTH CHANCE : " + std::to_string(gChance) << std::endl;
 	std::cout << std::to_string(parent->getPosition().x) + " , " + std::to_string(parent->getPosition().y) + " , " + std::to_string(parent->getPosition().z) << std::endl;
-	glm::vec3 location = parent->getPosition() + glm::vec3(getRandomFloat(-0.9f, 0.9f), getRandomFloat(0.6f, 1.0f), getRandomFloat(-0.9f, 0.9f));
-	glm::vec3 control = -glm::vec3(0.0f, 0.5f, 0.0f);
+	glm::vec3 location = parent->getPosition() + glm::vec3(getRandomFloat(-0.9f, 0.9f), getRandomFloat(0.4f, 1.0f), getRandomFloat(-0.9f, 0.9f));
+	glm::vec3 control = glm::vec3(0.0f, 0.5f, 0.0f);
 	float w = parent->getWidth() * getRandomFloat(0.6f, 0.8f);
 	Plant* plant = parent->getPlant();
 	Node* internode = new Node(NodeType::APICAL_BUD, location, control, w, plant, dChance, gChance);
@@ -73,8 +73,8 @@ Curve makeCurveFromNodes(Node* firstNode, Node* secondNode, int aSubdivisions, i
 	return Curve(aSubdivisions, aSegments, firstNode->getWidth(), secondNode->getWidth(),
 		firstNode->getPosition(),
 		secondNode->getPosition(),
-		-firstNode->getControlPoint(),
-		secondNode->getControlPoint()); // This is inverted to make sure that connected curves match correctly
+		firstNode->getControlPoint(),
+		-secondNode->getControlPoint()); // This is inverted to make sure that connected curves match correctly
 }
 
 // this function will recursively append curves created from segments to a passed vector

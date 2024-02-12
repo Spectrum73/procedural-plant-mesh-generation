@@ -135,14 +135,14 @@ int main()
 	Curve basicCurve = Curve(8, 6, 0.1f, 0.1f,
 		glm::vec3(0.0f, 0.0f, 0.0f),
 		glm::vec3(0.0f, 1.0f, 1.0f),
-		glm::vec3(0.0f, 0.5f, 0.0f),
-		glm::vec3(0.0f, -0.5f, 0.0f));
+		glm::vec3(0.0f, 2.0f, 0.0f),
+		glm::vec3(0.0f, -2.0f, 0.0f));
 
 	PlantParameters testParams;
 	testParams.ApicalBudExtinction = 0.05f;
 	testParams.GrowthRate = 0.9f;
 	testParams.CircumferenceEdges = 5;
-	testParams.CurveSegments = 3;
+	testParams.CurveSegments = 8;
 	Plant testPlant = Plant(testParams);
 	testPlant.GenerateGraph();
 	testPlant.GenerateMesh();
@@ -196,7 +196,7 @@ int main()
 			prevTime = currentTime;
 		}
 
-		mesh.Draw(shaderProgram, camera);
+		//mesh.Draw(shaderProgram, camera);
 
 		//bezier.DrawBezier(shaderProgram, camera);
 

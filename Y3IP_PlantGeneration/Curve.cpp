@@ -34,7 +34,7 @@ MeshData Curve::calculateMesh(int aSubdivisions, float startWidth, float endWidt
 		// The aim of this is to copy the prior ring's rotation
 		else direction = glm::normalize(endPosition - startPosition);
 		// glm::lookAt is a function designed for cameras to use, due to how cameras work we must inverse this vector for it to work for regular positions.
-		auto ringRotation = glm::lookAt(glm::vec3(0.0f), direction, glm::vec3(0.0f, 0.0f, 1.0f));
+		auto ringRotation = glm::lookAt(glm::vec3(0.0f), direction, glm::vec3(1.0f, 0.0f, 0.0f));
 		ringRotation = glm::inverse(ringRotation);
 		
 		float currentAngle = 0.0f;
