@@ -57,6 +57,17 @@ GLuint lightIndices[] =
 
 // /TEMPORARY
 
+// Defined globally so it can be accessed by framebuffer_size_callback
+Camera camera = Camera(WINDOW_WIDTH, WINDOW_HEIGHT, glm::vec3(0.0f, 1.0f, 0.0f));;
+
+// This function is executed whenever the window is resized by any means
+void framebuffer_size_callback(GLFWwindow* window, int aWidth, int aHeight) {
+	if (aWidth < 1 || aHeight < 1) return;
+
+	glViewport(0, 0, aWidth, aHeight);
+	camera.setWidthAndHeight(aWidth, aHeight);
+}
+
 
 int main() 
 {
@@ -78,6 +89,9 @@ int main()
 		return -1;
 	}
 	glfwMakeContextCurrent(window);
+
+	// Adjusts the window if it is resized
+	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
 	gladLoadGL();
 	glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
@@ -142,7 +156,7 @@ int main()
 	testParams.ApicalBudExtinction = 0.05f;
 	testParams.GrowthRate = 0.9f;
 	testParams.CircumferenceEdges = 5;
-	testParams.CurveSegments = 8;
+	testParams.CurveSegments = 3;
 	Plant testPlant = Plant(testParams);
 	testPlant.GenerateGraph();
 	testPlant.GenerateMesh();
@@ -173,8 +187,6 @@ int main()
 	// Enables the depth buffer and wireframe view if enabled
 	glEnable(GL_DEPTH_TEST);
 	if (WIREFRAME) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-
-	Camera camera(WINDOW_WIDTH, WINDOW_HEIGHT, glm::vec3(0.0f, 1.0f, 0.0f));
 
 	while (!glfwWindowShouldClose(window)) 
 	{

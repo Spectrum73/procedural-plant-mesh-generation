@@ -9,8 +9,13 @@ Camera::Camera(int width, int height, glm::vec3 position)
 	Position = position;
 }
 
-void Camera::updateMatrix(float FOVdeg, float nearPlane, float farPlane)
+void Camera::updateMatrix(float aFOVdeg, float aNearPlane, float aFarPlane)
 {
+	// Save the new settings
+	FOVdeg = aFOVdeg;
+	nearPlane = aNearPlane;
+	farPlane = aFarPlane;
+
 	// Initializes matrices since otherwise they will be the null matrix
 	glm::mat4 view = glm::mat4(1.0f);
 	glm::mat4 projection = glm::mat4(1.0f);

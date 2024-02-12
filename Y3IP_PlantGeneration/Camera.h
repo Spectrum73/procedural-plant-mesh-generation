@@ -27,6 +27,10 @@ public:
 	int width;
 	int height;
 
+	float FOVdeg; // FOV in degrees
+	float nearPlane;
+	float farPlane;
+
 	// Adjust the speed of the camera and it's sensitivity when looking around
 	float speed = 1.0f;
 	float sensitivity = 100.0f;
@@ -38,10 +42,13 @@ public:
 	Camera(int width, int height, glm::vec3 position);
 
 	// Updates the camera matrix to the Vertex Shader
-	void updateMatrix(float FOVdeg, float nearPlane, float farPlane);
+	void updateMatrix(float aFOVdeg, float aNearPlane, float aFarPlane);
+	void updateMatrix() { updateMatrix(FOVdeg, nearPlane, farPlane); }
 	// Exports the camera matrix to a shader
 	void Matrix(Shader& shader, const char* uniform);
 	// Handles camera inputs
 	void Inputs(GLFWwindow* window);
+	// Adjust the width and height.
+	void setWidthAndHeight(int aWidth, int aHeight) { width = aWidth, height = aHeight, updateMatrix(); }
 };
 #endif
