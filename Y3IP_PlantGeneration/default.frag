@@ -33,5 +33,5 @@ void main()
 	// outputs final color
 	FragColor = texture(diffuse0, TexCoord) * lightColor * (diffuse + ambient + specular);
 
-	//FragColor = vec4(normal/2 + 0.5f, 0);
+	FragColor = vec4(normal/2 + 0.5f, 0);
 }

@@ -28,7 +28,7 @@ void GenerateInternode(Node* parent, float chanceDecay) {
 	if (dChance >= 1.0f) return;
 	std::cout << std::to_string(dChance) + " GROWTH CHANCE : " + std::to_string(gChance) << std::endl;
 	std::cout << std::to_string(parent->getPosition().x) + " , " + std::to_string(parent->getPosition().y) + " , " + std::to_string(parent->getPosition().z) << std::endl;
-	glm::vec3 location = parent->getPosition() + glm::vec3(getRandomFloat(-0.9f, 0.9f), getRandomFloat(0.8f, 1.0f), getRandomFloat(-0.9f, 0.9f));
+	glm::vec3 location = parent->getPosition() + glm::vec3(getRandomFloat(-0.9f, 0.9f), getRandomFloat(0.6f, 1.0f), getRandomFloat(-0.9f, 0.9f));
 	glm::vec3 control = -glm::vec3(0.0f, 0.5f, 0.0f);
 	float w = parent->getWidth() * getRandomFloat(0.6f, 0.8f);
 	Plant* plant = parent->getPlant();
@@ -68,8 +68,9 @@ void Plant::GenerateGraph() {
 	return;
 }
 
-Curve makeCurveFromNodes(Node* firstNode, Node* secondNode) {
-	return Curve(8, 6, firstNode->getWidth(), secondNode->getWidth(),
+// Creates a curve by passing in two nodes and the desired circumference subdivisions and number of segments.
+Curve makeCurveFromNodes(Node* firstNode, Node* secondNode, int aSubdivisions, int aSegments) {
+	return Curve(aSubdivisions, aSegments, firstNode->getWidth(), secondNode->getWidth(),
 		firstNode->getPosition(),
 		secondNode->getPosition(),
 		-firstNode->getControlPoint(),
@@ -79,8 +80,9 @@ Curve makeCurveFromNodes(Node* firstNode, Node* secondNode) {
 // this function will recursively append curves created from segments to a passed vector
 void addCurvesFromNode(Node* node, std::vector<Curve>& curves) {
 	if (node != nullptr && !node->getChildren().empty()) {
+		PlantParameters pParams = node->getPlant()->getParameters();
 		for (Node* childNode : node->getChildren()) {
-			curves.push_back(makeCurveFromNodes(node, childNode));
+			curves.push_back(makeCurveFromNodes(node, childNode, pParams.CircumferenceEdges, pParams.CurveSegments));
 			addCurvesFromNode(childNode, curves);
 		}
 	}
