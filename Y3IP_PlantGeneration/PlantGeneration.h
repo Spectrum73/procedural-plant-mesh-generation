@@ -29,20 +29,31 @@ class Plant;
 /// </summary>
 class Node {
 public:
-	Node(NodeType aType, glm::vec3 aLocalPosition, glm::vec3 aControlPoint, float aWidth, Plant* aPlant, float aDeathChance, float aGrowthChance) {
+	Node(NodeType aType, glm::vec3 aLocalPosition, glm::vec3 aControlPoint, float aWidth, int aEdges, int aSegments, Plant* aPlant, float aDeathChance, float aGrowthChance, Node* parent = NULL) {
 		type = aType;
 		localPosition = aLocalPosition;
 		controlPoint = aControlPoint;
 		width = aWidth;
+		circumferenceEdges = aEdges;
+		curveSegments = aSegments;
 		growthChance = aGrowthChance;
 		deathChance = aDeathChance;
 		dead = false;
 		plant = aPlant;
+		if (parent != NULL)
+			parent->AddChild(this);
 	}
-	Node(NodeType aType, glm::vec3 aLocalPosition, glm::vec3 aControlPoint, float aWidth, Plant* aPlant, float aDeathChance, float aGrowthChance, Node* parent) : Node(aType, aLocalPosition, aControlPoint, aWidth, aPlant, aDeathChance, aGrowthChance) {
-		parent->AddChild(this);
+	Node(Node* copyNode, Plant* newPlant) : Node(copyNode->type, copyNode->localPosition, copyNode->controlPoint, copyNode->width, copyNode->circumferenceEdges, copyNode->curveSegments, newPlant, copyNode->deathChance, copyNode->growthChance) {
+		for (int i = 0; i < copyNode->children.size(); i++) {
+			children.push_back(new Node(copyNode->children[i], newPlant));
+		}
 	}
-	virtual ~Node() {} // allows polymorphic behaviour
+	virtual ~Node() {
+		for (int i = 0; i < children.size(); i++) {
+			delete children[i];
+		}
+		children.clear();
+	} // allows polymorphic behaviour
 	void AddChild(Node* child) { if (child != nullptr) children.push_back(child); }
 	std::vector<Node*>& getChildren() { return(children); }
 	int getNbChildren() { return (int)(children.size() / sizeof(Node*)); }
@@ -58,10 +69,14 @@ public:
 	Plant* getPlant() { return plant; }
 	NodeType getType() { return type; }
 	void setType(NodeType aType) { type = aType; }
+	int getEdges() { return circumferenceEdges; }
+	int getSegments() { return curveSegments; }
 private:
 	NodeType type;
 	glm::vec3 localPosition;
 	float width;
+	int circumferenceEdges = 8; // The number of edges per circumference on each curve's mesh
+	int curveSegments = 6; // The number of segments in the curve's mesh.
 	glm::vec3 controlPoint; // Bezier curve for this node's control point
 	std::vector<Node*> children;
 	Plant* plant;
@@ -102,8 +117,8 @@ private:
 /// https://onlinelibrary.wiley.com/doi/epdf/10.1111/cgf.12282
 /// </summary>
 struct PlantParameters {
-	int CircumferenceEdges = 8; // The number of edges per circumference on each curve's mesh
-	int CurveSegments = 6; // The number of segments in the curve's mesh.
+	int RootCircumferenceEdges = 8; // The number of edges per circumference on each curve's mesh
+	int RootCurveSegments = 6; // The number of segments in the curve's mesh.
 
 	float AAV; // ApicalAngleVariance | Variance of the angular difference between the growth direction and the direction of the apical bud.
 	int NLB; // NbLateralBuds | The number of lateral buds that are created per each node of a growing shoot.
@@ -143,14 +158,20 @@ struct PlantParameters {
 class Plant {
 public:
 	Plant(PlantParameters aParams);
+	Plant(Plant* aPlant);
 	void GenerateGraph();
-	void GenerateMesh();
+	void CopyGraph(Plant* copyTarget);
+	void GenerateMesh(int aEdgeReduction = 0, int aSegmentReduction = 0); // Generates the mesh with reduced qualities
 	void Draw(Shader& shader, Camera& camera);
 	void setParameters(const PlantParameters& p) { parameters = p; }
 	PlantParameters getParameters() { return parameters; }
 	void addChild(Node* node) { RootNode.AddChild(node); }
 private:
 	bool hasLivingBuds(); // Returns whether any buds are still alive
+	// creates an internode connected to the provided parent
+	void GenerateInternode(Node* parent, float chanceDecay);
+	// Recursive function to perform a growth cycle on a given node and its children
+	void SimulateGrowthCycle(Node* node, float chanceDecay);
 	PlantParameters parameters;
 	Node RootNode;
 	std::vector<Curve> curves;

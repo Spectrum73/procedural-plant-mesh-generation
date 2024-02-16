@@ -58,7 +58,23 @@ GLuint lightIndices[] =
 // /TEMPORARY
 
 // Defined globally so it can be accessed by framebuffer_size_callback
-Camera camera = Camera(WINDOW_WIDTH, WINDOW_HEIGHT, glm::vec3(0.0f, 1.0f, 0.0f));;
+Camera camera = Camera(WINDOW_WIDTH, WINDOW_HEIGHT, glm::vec3(0.0f, 1.0f, 0.0f));
+// Defined globally so it can be accessed via key_callback
+int plantIndex = 0;
+std::vector<Plant*> Plants;
+
+void RegeneratePlants() {
+	for (int i = 0; i < Plants.size(); i++) {
+		if (i == 0) {
+			Plants[i]->GenerateGraph();
+			Plants[i]->GenerateMesh();
+		}
+		else {
+			Plants[i]->CopyGraph(Plants[0]);
+			Plants[i]->GenerateMesh(3 * i, 2 * i);
+		}
+	}
+}
 
 // This function is executed whenever the window is resized by any means
 void framebuffer_size_callback(GLFWwindow* window, int aWidth, int aHeight) {
@@ -68,6 +84,23 @@ void framebuffer_size_callback(GLFWwindow* window, int aWidth, int aHeight) {
 	camera.setWidthAndHeight(aWidth, aHeight);
 }
 
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
+{
+	if (key == GLFW_KEY_1 && action == GLFW_PRESS) {
+		if (plantIndex > 0)
+			plantIndex--;
+		std::cout << "plantIndex: " + std::to_string(plantIndex) << std::endl;
+	}
+	else if (key == GLFW_KEY_2 && action == GLFW_PRESS){
+		plantIndex++;
+		std::cout << "plantIndex: " + std::to_string(plantIndex) << std::endl;
+	}
+	else if (key == GLFW_KEY_R && action == GLFW_PRESS) {
+		// Regenerate Plant
+		std::cout << "REGENERATING PLANTS" << std::endl;
+		RegeneratePlants();
+	}
+}
 
 int main() 
 {
@@ -92,6 +125,9 @@ int main()
 
 	// Adjusts the window if it is resized
 	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+
+	// Function to call when inputs are made
+	glfwSetKeyCallback(window, key_callback);
 
 	gladLoadGL();
 	glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
@@ -154,12 +190,17 @@ int main()
 
 	PlantParameters testParams;
 	testParams.ApicalBudExtinction = 0.05f;
-	testParams.GrowthRate = 0.9f;
-	testParams.CircumferenceEdges = 5;
-	testParams.CurveSegments = 3;
+	testParams.GrowthRate = 0.6f;
+	testParams.RootCircumferenceEdges = 8;
+	testParams.RootCurveSegments = 6;
 	Plant testPlant = Plant(testParams);
-	testPlant.GenerateGraph();
-	testPlant.GenerateMesh();
+	Plants.push_back(&testPlant);
+
+	// This plant will be lower quality than the original
+	Plant LOD1_Plant = Plant(testPlant);
+	Plants.push_back(&LOD1_Plant);
+
+	RegeneratePlants();
 
 	// Get the matrix for where we want to place the meshes
 	glm::vec3 objectPos = glm::vec3(0.0f, 0.0f, 0.0f);
@@ -219,7 +260,14 @@ int main()
 
 		light.Draw(lightShader, camera);
 
-		testPlant.Draw(shaderProgram, camera);
+		switch (plantIndex) {
+		case 0:
+			testPlant.Draw(shaderProgram, camera);
+			break;
+		case 1:
+			LOD1_Plant.Draw(shaderProgram, camera);
+			break;
+		}
 
 		// Swap back buffer with front buffer
 		glfwSwapBuffers(window);
