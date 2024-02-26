@@ -155,14 +155,13 @@ struct PlantParameters {
 };
 
 
-class Plant {
+class Plant : public Mesh {
 public:
 	Plant(PlantParameters aParams);
 	Plant(Plant* aPlant);
 	void GenerateGraph();
 	void CopyGraph(Plant* copyTarget);
 	void GenerateMesh(int aEdgeReduction = 0, int aSegmentReduction = 0); // Generates the mesh with reduced qualities
-	void Draw(Shader& shader, Camera& camera);
 	void setParameters(const PlantParameters& p) { parameters = p; }
 	PlantParameters getParameters() { return parameters; }
 	void addChild(Node* node) { RootNode.AddChild(node); }

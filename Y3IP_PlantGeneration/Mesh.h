@@ -17,6 +17,9 @@ struct MeshData {
 
 class Mesh
 {
+private:
+	// Sets up the VAO
+	void SetupVAO();
 public:
 	std::vector <Vertex> vertices;
 	std::vector <GLuint> indices;
@@ -25,10 +28,18 @@ public:
 	VAO VAO;
 
 	// Initializes the mesh
+	Mesh() = default; // create a mesh with no data
 	Mesh(std::vector <Vertex>& vertices, std::vector <GLuint>& indices, std::vector <Texture>& textures);
 	Mesh(MeshData data) : Mesh(data.vertices, data.indices, data.textures) {}
 
 	// Draws the mesh
 	void Draw(Shader& shader, Camera& camera);
+
+	// Concatenates the passed mesh onto this mesh.
+	void Concatenate(Mesh& aMesh);
+	void Concatenate(std::vector<Mesh*> aMeshes);
+
+	// Empties the mesh's vectors
+	void Delete();
 };
 #endif

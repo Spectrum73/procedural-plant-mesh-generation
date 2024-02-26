@@ -129,14 +129,24 @@ void Plant::GenerateMesh(int aEdgeReduction, int aSegmentReduction) {
 	if (this->curves.size() > 0) {
 		this->curves.clear();
 	}
+	// Clear our previous mesh
+	this->Delete();
+
 	if (&RootNode != nullptr)
 		addCurvesFromNode(&RootNode, this->curves, aEdgeReduction, aSegmentReduction);
-	return;
+
+	// Concatenate all curve meshes to our main plant mesh
+	for (Curve& curve : this->curves)
+	{
+		this->Concatenate(curve);
+	}
 }
 
+/*
 void Plant::Draw(Shader& shader, Camera& camera) {
 	for (Curve curve : curves)
 	{
 		curve.Draw(shader, camera);
 	}
 }
+*/

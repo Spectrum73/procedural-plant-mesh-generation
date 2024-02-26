@@ -193,11 +193,11 @@ int main()
 	testParams.GrowthRate = 0.6f;
 	testParams.RootCircumferenceEdges = 8;
 	testParams.RootCurveSegments = 6;
-	Plant testPlant = Plant(testParams);
+	Plant testPlant = new Plant(testParams);
 	Plants.push_back(&testPlant);
 
 	// This plant will be lower quality than the original
-	Plant LOD1_Plant = Plant(testPlant);
+	Plant LOD1_Plant = new Plant(testPlant);
 	Plants.push_back(&LOD1_Plant);
 
 	RegeneratePlants();
