@@ -63,9 +63,9 @@ MeshData Curve::calculateMesh(int aSubdivisions, float startWidth, float endWidt
 					// Offset is the index offset for previous ring and slices
 					int offset = (i - 1) + (ringIndex-1) * aSubdivisions;
 
-					// 0a 0b 1a
+					// 1a 0b 0a
 					// 1a 1b 0b
-					indices.push_back((GLuint)0 + offset); indices.push_back((GLuint)0 + offset + aSubdivisions); indices.push_back((GLuint)1 + offset);
+					indices.push_back((GLuint)1 + offset); indices.push_back((GLuint)0 + offset + aSubdivisions); indices.push_back((GLuint)0 + offset);
 					indices.push_back((GLuint)1 + offset); indices.push_back((GLuint)1 + offset + aSubdivisions); indices.push_back((GLuint)0 + offset + aSubdivisions);
 				}
 			}
@@ -78,9 +78,9 @@ MeshData Curve::calculateMesh(int aSubdivisions, float startWidth, float endWidt
 				int ringOffset = (ringIndex-1) * aSubdivisions;
 				int offset = (i - 1);
 
-				// 0a 0b 1a
+				// 1a 0b 0a
 				// 1a 1b 0b
-				indices.push_back((GLuint)offset + ringOffset);  indices.push_back((GLuint)ringOffset + aSubdivisions + offset); indices.push_back((GLuint)ringOffset);
+				indices.push_back((GLuint)ringOffset); indices.push_back((GLuint)ringOffset + aSubdivisions + offset); indices.push_back((GLuint)offset + ringOffset);
 				indices.push_back((GLuint)ringOffset); indices.push_back((GLuint)ringOffset + aSubdivisions); indices.push_back((GLuint)ringOffset + aSubdivisions + offset);
 			}
 		}
