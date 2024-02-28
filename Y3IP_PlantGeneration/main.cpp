@@ -2,12 +2,16 @@
 #include "Curve.h"
 #include "PlantGeneration.h"
 
+#include <iostream>
+#include <fstream>
+
 // Some variables for tweaking the program
 #define WINDOW_NAME "Mesh Viewport"
 #define WINDOW_WIDTH 800
 #define WINDOW_HEIGHT 800
 #define FOV_RADIANS 45.0f
 #define WIREFRAME false
+#define BACKFACE_CULLING true
 
 // TEMPORARY
 
@@ -58,7 +62,77 @@ GLuint lightIndices[] =
 // /TEMPORARY
 
 // Defined globally so it can be accessed by framebuffer_size_callback
-Camera camera = Camera(WINDOW_WIDTH, WINDOW_HEIGHT, glm::vec3(0.0f, 1.0f, 0.0f));;
+Camera camera = Camera(WINDOW_WIDTH, WINDOW_HEIGHT, glm::vec3(0.0f, 1.0f, 0.0f));
+// Defined globally so it can be accessed via key_callback
+int plantIndex = 0;
+std::vector<Plant*> Plants;
+
+void RegeneratePlants() {
+	for (int i = 0; i < Plants.size(); i++) {
+		if (i == 0) {
+			Plants[i]->GenerateGraph();
+			Plants[i]->GenerateMesh();
+		}
+		else {
+			Plants[i]->CopyGraph(Plants[0]);
+			Plants[i]->GenerateMesh(3 * i, 2 * i);
+		}
+	}
+}
+
+void SaveCurrentPlant() {
+	// Generate the file name
+	// Name format: {name}_{ID}_{LOD}.obj
+	std::string directory = "generations/";
+	std::string baseName = "mesh_000_";
+
+	for (int i = 0; i < Plants.size(); i++) {
+		// Create and open a text file
+		std::ofstream MyFile(directory + baseName + std::to_string(i) + ".obj");
+
+		// Write to the file
+		MyFile << "# Generated Mesh of LOD " + std::to_string(i) + '\n';
+
+		// https://en.wikipedia.org/wiki/Wavefront_.obj_file
+
+		// Write geometric vertices
+		MyFile << "# List of geometric vertices\n";
+		for (const Vertex &v : Plants[i]->vertices) {
+			MyFile << "v " + std::to_string(v.position.x) + " "
+				+ std::to_string(v.position.y) + " "
+				+ std::to_string(v.position.z) + " 1.0\n";
+		}
+
+		// Write texture coordinates
+		MyFile << "# List of texture coordinates\n";
+		for (const Vertex& v : Plants[i]->vertices) {
+			MyFile << "vt " + std::to_string(v.texUV.x) + " "
+				+ std::to_string(v.texUV.y) + " 0\n";
+		}
+
+		// Write vertex normals
+		MyFile << "# List of vertex normals\n";
+		for (const Vertex& v : Plants[i]->vertices) {
+			MyFile << "vn " + std::to_string(v.normal.x) + " "
+				+ std::to_string(v.normal.y) + " "
+				+ std::to_string(v.normal.z) + "\n";
+		}
+
+		// Write vertex indices
+		MyFile << "# List of vertex indices\n";
+		for (int j = 0; j < Plants[i]->indices.size(); j+=3) {
+			std::string ind0 = std::to_string(Plants[i]->indices[j] + 1);
+			std::string ind1 = std::to_string(Plants[i]->indices[j+1] + 1);
+			std::string ind2 = std::to_string(Plants[i]->indices[j+2] + 1);
+			MyFile << "f " + ind0 + " "
+				+ ind1 + " "
+				+ ind2 + "\n";
+		}
+
+		// Close the file
+		MyFile.close();
+	}
+}
 
 // This function is executed whenever the window is resized by any means
 void framebuffer_size_callback(GLFWwindow* window, int aWidth, int aHeight) {
@@ -68,6 +142,27 @@ void framebuffer_size_callback(GLFWwindow* window, int aWidth, int aHeight) {
 	camera.setWidthAndHeight(aWidth, aHeight);
 }
 
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
+{
+	if (key == GLFW_KEY_1 && action == GLFW_PRESS) {
+		if (plantIndex > 0)
+			plantIndex--;
+		std::cout << "plantIndex: " + std::to_string(plantIndex) << std::endl;
+	}
+	else if (key == GLFW_KEY_2 && action == GLFW_PRESS){
+		plantIndex++;
+		std::cout << "plantIndex: " + std::to_string(plantIndex) << std::endl;
+	}
+	else if (key == GLFW_KEY_R && action == GLFW_PRESS) {
+		// Regenerate Plant
+		std::cout << "REGENERATING PLANTS" << std::endl;
+		RegeneratePlants();
+	}
+	else if (key == GLFW_KEY_S && action == GLFW_PRESS && mods == GLFW_MOD_CONTROL) {
+		// Save the current Plant as .obj
+		SaveCurrentPlant();
+	}
+}
 
 int main() 
 {
@@ -92,6 +187,9 @@ int main()
 
 	// Adjusts the window if it is resized
 	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+
+	// Function to call when inputs are made
+	glfwSetKeyCallback(window, key_callback);
 
 	gladLoadGL();
 	glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
@@ -154,12 +252,17 @@ int main()
 
 	PlantParameters testParams;
 	testParams.ApicalBudExtinction = 0.05f;
-	testParams.GrowthRate = 0.9f;
-	testParams.CircumferenceEdges = 5;
-	testParams.CurveSegments = 3;
-	Plant testPlant = Plant(testParams);
-	testPlant.GenerateGraph();
-	testPlant.GenerateMesh();
+	testParams.GrowthRate = 0.6f;
+	testParams.RootCircumferenceEdges = 8;
+	testParams.RootCurveSegments = 6;
+	Plant testPlant = new Plant(testParams);
+	Plants.push_back(&testPlant);
+
+	// This plant will be lower quality than the original
+	Plant LOD1_Plant = new Plant(testPlant);
+	Plants.push_back(&LOD1_Plant);
+
+	RegeneratePlants();
 
 	// Get the matrix for where we want to place the meshes
 	glm::vec3 objectPos = glm::vec3(0.0f, 0.0f, 0.0f);
@@ -186,6 +289,7 @@ int main()
 
 	// Enables the depth buffer and wireframe view if enabled
 	glEnable(GL_DEPTH_TEST);
+	if (BACKFACE_CULLING) glEnable(GL_CULL_FACE);
 	if (WIREFRAME) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
 	while (!glfwWindowShouldClose(window)) 
@@ -219,7 +323,14 @@ int main()
 
 		light.Draw(lightShader, camera);
 
-		testPlant.Draw(shaderProgram, camera);
+		switch (plantIndex) {
+		case 0:
+			testPlant.Draw(shaderProgram, camera);
+			break;
+		case 1:
+			LOD1_Plant.Draw(shaderProgram, camera);
+			break;
+		}
 
 		// Swap back buffer with front buffer
 		glfwSwapBuffers(window);

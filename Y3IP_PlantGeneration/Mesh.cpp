@@ -1,11 +1,6 @@
 #include "Mesh.h"
 
-Mesh::Mesh(std::vector <Vertex>& vertices, std::vector <GLuint>& indices, std::vector <Texture>& textures)
-{
-	Mesh::vertices = vertices;
-	Mesh::indices = indices;
-	Mesh::textures = textures;
-
+void Mesh::SetupVAO() {
 	VAO.Bind();
 	// Generates Vertex Buffer Object and links it to vertices
 	VBO VBO(vertices);
@@ -22,6 +17,75 @@ Mesh::Mesh(std::vector <Vertex>& vertices, std::vector <GLuint>& indices, std::v
 	EBO.Unbind();
 }
 
+Mesh::Mesh(std::vector <Vertex>& vertices, std::vector <GLuint>& indices, std::vector <Texture>& textures)
+{
+	Mesh::vertices = vertices;
+	Mesh::indices = indices;
+	Mesh::textures = textures;
+
+	SetupVAO();
+}
+
+void Mesh::Concatenate(Mesh& aMesh) 
+{
+	// Append vertices
+	int indexOffset = vertices.size();
+	vertices.reserve(vertices.size() + aMesh.vertices.size());
+	vertices.insert(vertices.end(), aMesh.vertices.begin(), aMesh.vertices.end());
+
+	// Append indices
+	indices.reserve(indices.size() + aMesh.indices.size());
+	for (GLuint ind : aMesh.indices) 
+	{
+		indices.push_back(ind + indexOffset);
+	}
+
+	// Append textures
+	bool exists = false;
+	for (Texture &tex : aMesh.textures) {
+		exists = false;
+		// Only append if this texture doesn't exist
+		for (Texture &tex2 : textures)
+			if (&tex == &tex2)
+				exists = true;
+		if (!exists)
+			textures.push_back(tex);
+	}
+
+	SetupVAO();
+}
+
+void Mesh::Concatenate(std::vector<Mesh*> aMeshes) 
+{
+	for (Mesh* mesh : aMeshes) {
+		// Append vertices
+		int indexOffset = vertices.size();
+		vertices.reserve(vertices.size() + mesh->vertices.size());
+		vertices.insert(vertices.end(), mesh->vertices.begin(), mesh->vertices.end());
+
+		// Append indices
+		indices.reserve(indices.size() + mesh->indices.size());
+		indices.reserve(indices.size() + mesh->indices.size());
+		for (GLuint ind : mesh->indices)
+		{
+			indices.push_back(ind + indexOffset);
+		}
+
+		// Append textures
+		bool exists = false;
+		for (Texture &tex : mesh->textures) {
+			exists = false;
+			// Only append if this texture doesn't exist
+			for (Texture &tex2 : textures)
+				if (&tex == &tex2)
+					exists = true;
+			if (!exists)
+				textures.push_back(tex);
+		}
+	}
+
+	SetupVAO();
+}
 
 void Mesh::Draw(Shader& shader, Camera& camera)
 {
@@ -54,4 +118,13 @@ void Mesh::Draw(Shader& shader, Camera& camera)
 
 	// Draw the actual mesh
 	glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
+}
+
+void Mesh::Delete() 
+{
+	vertices.clear();
+	indices.clear();
+	textures.clear();
+
+	VAO.Delete();
 }
