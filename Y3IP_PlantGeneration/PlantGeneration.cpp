@@ -141,12 +141,3 @@ void Plant::GenerateMesh(int aEdgeReduction, int aSegmentReduction) {
 		this->Concatenate(curve);
 	}
 }
-
-/*
-void Plant::Draw(Shader& shader, Camera& camera) {
-	for (Curve curve : curves)
-	{
-		curve.Draw(shader, camera);
-	}
-}
-*/

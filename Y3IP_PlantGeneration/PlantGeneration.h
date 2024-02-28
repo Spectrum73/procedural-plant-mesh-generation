@@ -88,29 +88,6 @@ private:
 };
 
 /// <summary>
-/// Class for a segment (Stem or Trunk)
-/// detail refers to edges around the circumference
-/// </summary>
-/*
-class SegmentNode : public Node {
-public:
-	SegmentNode(NodeType aType, glm::vec3 aLocalPosition, Plant* plant, float aDeathChance, float aWidth, glm::vec3 aControlPoint) : Node(aType, aLocalPosition, plant, aDeathChance) {
-		thickness = aWidth;
-		controlPoint = aControlPoint;
-	}
-	// The following constructor is used to convert a bud to a segment, hence it should have no children
-	SegmentNode(Node& copyNode, float aWidth, glm::vec3 aControlPoint) 
-		: SegmentNode(copyNode.type, copyNode.localPosition, copyNode.plant, copyNode.deathChance, aWidth, aControlPoint) { }
-	float getThickness() { return thickness; }
-	glm::vec3 getControlPoint() { return controlPoint; }
-private:
-	float thickness;
-	glm::vec3 controlPoint; // Bezier curve for this node's control point
-	
-};
-*/
-
-/// <summary>
 /// A plant is a template of parameters used to generate an instance made of nodes.
 /// TODO - Many of these are placeholders right now and here to demonstrate examples
 /// Many potential parameters can be found at: https://onlinelibrary.wiley.com/doi/full/10.1111/cgf.12282?saml_referrer
