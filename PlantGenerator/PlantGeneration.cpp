@@ -5,6 +5,7 @@ Plant::Plant(PlantParameters aParams) : RootNode(NodeType::APICAL_BUD, glm::vec3
 }
 
 Plant::Plant(Plant* aPlant) : Plant(aPlant->getParameters()){
+	if (aPlant == this) return; // Can't copy ourselves!
 	CopyGraph(aPlant);
 }
 
@@ -76,13 +77,14 @@ void Plant::SimulateGrowthCycle(Node* node, float chanceDecay) {
 }
 
 void Plant::GenerateGraph() {
-	float chanceDecay = 0.96f; // Each child's death chance = parent's deathChance / chanceDecay
+	float chanceDecay = parameters.Decay; // Each child's death chance = parent's deathChance / chanceDecay
 	// If plant has already grown (we are regenerating)
 	if (!hasLivingBuds()) {
 		RootNode.getChildren().clear();
 		RootNode.setDead(false);
-		RootNode.setDeathChance(parameters.ApicalBudExtinction);
-		RootNode.setGrowthChance(parameters.GrowthRate);
+
+		// Keeping a pointer to the old one and deleting was crashing so I'm assuming this overwrites the old one
+		RootNode = (Node(NodeType::APICAL_BUD, glm::vec3(0.0f), glm::vec3(0.0f, 0.5f, 0.0f), 0.5f, parameters.RootCircumferenceEdges, parameters.RootCurveSegments, this, parameters.ApicalBudExtinction, parameters.GrowthRate));
 	}
 
 	GenerateInternode(&RootNode, chanceDecay); // force at least one bud to grow from the root.

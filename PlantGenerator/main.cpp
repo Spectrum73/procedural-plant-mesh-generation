@@ -7,6 +7,8 @@
 #include "PlantGeneration.h"
 #include "FrameBuffer.h"
 
+#include "Helpers.h"
+
 #include <iostream>
 #include <fstream>
 
@@ -72,6 +74,8 @@ bool MainWindowFocused = false;
 char filename[30] = "mesh";
 int shaderIndex = 0;
 bool wireframe = false;
+PlantParameters plantParams;
+int LOD_edgeReduction = 3; int LOD_segmentReduction = 2;
 
 // Defined globally so it can be accessed via key_callback
 int plantIndex = 0;
@@ -80,12 +84,13 @@ std::vector<Plant*> Plants;
 void RegeneratePlants() {
 	for (int i = 0; i < Plants.size(); i++) {
 		if (i == 0) {
+			Plants[i]->setParameters(plantParams);
 			Plants[i]->GenerateGraph();
 			Plants[i]->GenerateMesh();
 		}
 		else {
 			Plants[i]->CopyGraph(Plants[0]);
-			Plants[i]->GenerateMesh(3 * i, 2 * i);
+			Plants[i]->GenerateMesh(LOD_edgeReduction * i, LOD_segmentReduction * i);
 		}
 	}
 }
@@ -284,17 +289,21 @@ int main()
 		glm::vec3(0.0f, 2.0f, 0.0f),
 		glm::vec3(0.0f, -2.0f, 0.0f));
 
-	PlantParameters testParams;
-	testParams.ApicalBudExtinction = 0.05f;
-	testParams.GrowthRate = 0.6f;
-	testParams.RootCircumferenceEdges = 8;
-	testParams.RootCurveSegments = 6;
-	Plant testPlant = new Plant(testParams);
-	Plants.push_back(&testPlant);
+	plantParams.Decay = 0.96f;
+	plantParams.ApicalBudExtinction = 0.05f;
+	plantParams.GrowthRate = 0.6f;
+	plantParams.RootCircumferenceEdges = 8;
+	plantParams.RootCurveSegments = 6;
+	Plant mainPlant = new Plant(plantParams);
+	Plants.push_back(&mainPlant);
 
 	// This plant will be lower quality than the original
-	Plant LOD1_Plant = new Plant(testPlant);
+	Plant LOD1_Plant = new Plant(mainPlant);
 	Plants.push_back(&LOD1_Plant);
+
+	// This plant will be lower quality than the original
+	Plant LOD2_Plant = new Plant(mainPlant);
+	Plants.push_back(&LOD2_Plant);
 
 	RegeneratePlants();
 
@@ -401,14 +410,9 @@ int main()
 			break;
 		}
 
-		switch (plantIndex) {
-		case 0:
-			testPlant.Draw(*shader, camera);
-			break;
-		case 1:
-			LOD1_Plant.Draw(*shader, camera);
-			break;
-		}
+		// Draw the currently selected plant
+		if (Plants[plantIndex] != NULL)
+			Plants[plantIndex]->Draw(*shader, camera);
 
 		frameBuffer.Unbind();
 
@@ -418,6 +422,33 @@ int main()
 		ImGui::SetCursorPosX((ImGui::GetWindowWidth()-150.0f)/2);
 		if (ImGui::Button("Regenerate", ImVec2(150.0f, 0.0f)))
 			RegeneratePlants();
+		ImGui::Text("LOD Settings");
+		ImGui::PushItemWidth(150);
+		if (ImGui::InputInt("LOD Level", &plantIndex, 1))
+			plantIndex = plantIndex < 0 ? 0 : (plantIndex > Plants.size()-1 ? Plants.size()-1 : plantIndex); // Clamp
+		if (ImGui::InputInt("Edge Reduction", &LOD_edgeReduction, 1))
+			LOD_edgeReduction = LOD_edgeReduction < 0 ? 0 : LOD_edgeReduction;
+		if (ImGui::InputInt("Segment Reduction", &LOD_segmentReduction, 1))
+			LOD_segmentReduction = LOD_segmentReduction < 0 ? 0 : LOD_segmentReduction;
+		ImGui::PopItemWidth();
+		ImGui::Text("Plant Settings");
+		ImGui::PushItemWidth(150);
+		/*plantParams.ApicalBudExtinction = 0.05f;
+		plantParams.GrowthRate = 0.6f;
+		plantParams.RootCircumferenceEdges = 8;
+		plantParams.RootCurveSegments = 6;*/
+		if (ImGui::InputFloat("Apical Bud Extinction", &plantParams.ApicalBudExtinction, 0.05f))
+			plantParams.ApicalBudExtinction = clamp(plantParams.ApicalBudExtinction, 0.05f, 1.0f);
+		if (ImGui::InputFloat("Growth Rate", &plantParams.GrowthRate, 0.05f))
+			plantParams.GrowthRate = clamp(plantParams.GrowthRate, 0.05f, 1.0f);
+		if (ImGui::InputFloat("Decay", &plantParams.Decay, 0.01f))
+			plantParams.Decay = clamp(plantParams.Decay, 0.01f, 1.0f);
+		if (ImGui::InputInt("Root Circumference Edges", &plantParams.RootCircumferenceEdges, 1))
+			plantParams.RootCircumferenceEdges = clamp(plantParams.RootCircumferenceEdges, 3, 256);
+		if (ImGui::InputInt("Root Curve Segments", &plantParams.RootCurveSegments, 1))
+			plantParams.RootCurveSegments = clamp(plantParams.RootCurveSegments, 1, 256);
+
+		ImGui::PopItemWidth();
 		ImGui::End();
 
 		ImGui::Begin("Export Settings");

@@ -179,6 +179,7 @@
     <ClInclude Include="Curve.h" />
     <ClInclude Include="EBO.h" />
     <ClInclude Include="FrameBuffer.h" />
+    <ClInclude Include="Helpers.h" />
     <ClInclude Include="imgui\imconfig.h" />
     <ClInclude Include="imgui\imgui.h" />
     <ClInclude Include="imgui\imgui_impl_glfw.h" />
