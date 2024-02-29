@@ -154,6 +154,7 @@
     <ClCompile Include="Camera.cpp" />
     <ClCompile Include="Curve.cpp" />
     <ClCompile Include="EBO.cpp" />
+    <ClCompile Include="FrameBuffer.cpp" />
     <ClCompile Include="glad.c" />
     <ClCompile Include="imgui\imgui.cpp" />
     <ClCompile Include="imgui\imgui_demo.cpp" />
@@ -177,6 +178,7 @@
     <ClInclude Include="Camera.h" />
     <ClInclude Include="Curve.h" />
     <ClInclude Include="EBO.h" />
+    <ClInclude Include="FrameBuffer.h" />
     <ClInclude Include="imgui\imconfig.h" />
     <ClInclude Include="imgui\imgui.h" />
     <ClInclude Include="imgui\imgui_impl_glfw.h" />
@@ -202,8 +204,10 @@
     <Image Include="terrible.png" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="basic_lighting.frag" />
     <None Include="light.frag" />
     <None Include="light.vert" />
+    <None Include="normals.frag" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

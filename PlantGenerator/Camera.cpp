@@ -9,6 +9,13 @@ Camera::Camera(int width, int height, glm::vec3 position)
 	Position = position;
 }
 
+void Camera::calculateDeltaTime() {
+	deltaTime = 0;
+	currentFrame = glfwGetTime();
+	if (lastFrame != 0) deltaTime = currentFrame - lastFrame;
+	lastFrame = currentFrame;
+}
+
 void Camera::updateMatrix(float aFOVdeg, float aNearPlane, float aFarPlane)
 {
 	// Save the new settings
@@ -18,10 +25,28 @@ void Camera::updateMatrix(float aFOVdeg, float aNearPlane, float aFarPlane)
 
 	// Initializes matrices since otherwise they will be the null matrix
 	glm::mat4 view = glm::mat4(1.0f);
+	glm::mat4 rotationMat(1.0f);
 	glm::mat4 projection = glm::mat4(1.0f);
 
 	// Makes camera look in the right direction from the right position
-	view = glm::lookAt(Position, Position + Orientation, Up);
+	if (!orbiting) view = glm::lookAt(Position, Position + Orientation, Up);
+	else {
+		// Set the centre of the orbit
+		glm::vec3 orbitCentre = glm::vec3(0.0f, orbitHeight, 0.0f);
+
+		// Adjust orbit rotation
+		orbitRotation += orbitSpeed * deltaTime;
+		if (orbitRotation > 360.0f) orbitRotation -= 360.0f;
+		rotationMat = glm::rotate(rotationMat, orbitRotation, glm::vec3(0.0, 1.0, 0.0));
+
+		// Combine to get the view matrix
+		view = glm::translate(glm::vec3(0.0f, -orbitHeight, -orbitDistance)) * rotationMat;
+
+		// Set our variables to line up with the current view for when we exit orbit mode.
+		Position = -glm::mat3(glm::inverse(rotationMat)) * glm::vec3(view[3]);
+		Orientation = glm::normalize(orbitCentre - Position);
+	}
+
 	// Adds perspective to the scene
 	projection = glm::perspective(glm::radians(FOVdeg), (float)width / height, nearPlane, farPlane);
 
@@ -37,13 +62,8 @@ void Camera::Matrix(Shader& shader, const char* uniform)
 
 
 
-void Camera::Inputs(GLFWwindow* window)
+void Camera::Inputs(GLFWwindow* window, int aMouseSnapPosX, int aMouseSnapPosY)
 {
-	float deltaTime = 0;
-	currentFrame = glfwGetTime();
-	if (lastFrame != 0) deltaTime = currentFrame - lastFrame;
-	lastFrame = currentFrame;
-
 	// Handles key inputs
 	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
 	{
@@ -85,23 +105,28 @@ void Camera::Inputs(GLFWwindow* window)
 		// Hides mouse cursor
 		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
 
+		float centreX = aMouseSnapPosX == -1 ? (width / 2) : aMouseSnapPosX;
+		float centreY = aMouseSnapPosY == -1 ? (height / 2) : aMouseSnapPosY;
+
 		// Prevents camera from jumping on the first click
 		if (firstClick)
 		{
-			glfwSetCursorPos(window, (width / 2), (height / 2));
+			glfwSetCursorPos(window, centreX, centreY);
+			std::cout << "WORK" << std::endl;
 			firstClick = false;
 		}
 
 		// Stores the coordinates of the cursor
 		double mouseX;
 		double mouseY;
+
 		// Fetches the coordinates of the cursor
 		glfwGetCursorPos(window, &mouseX, &mouseY);
 
 		// Normalizes and shifts the coordinates of the cursor such that they begin in the middle of the screen
 		// and then "transforms" them into degrees 
-		float rotX = sensitivity * (float)(mouseY - (height / 2)) / height;
-		float rotY = sensitivity * (float)(mouseX - (width / 2)) / width;
+		float rotX = sensitivity * (float)(mouseY - centreY) / height;
+		float rotY = sensitivity * (float)(mouseX - centreX) / width;
 
 		// Calculates upcoming vertical change in the Orientation
 		glm::vec3 newOrientation = glm::rotate(Orientation, glm::radians(-rotX), glm::normalize(glm::cross(Orientation, Up)));
@@ -116,7 +141,7 @@ void Camera::Inputs(GLFWwindow* window)
 		Orientation = glm::rotate(Orientation, glm::radians(-rotY), Up);
 
 		// Sets mouse cursor to the middle of the screen so that it doesn't end up roaming around
-		glfwSetCursorPos(window, (width / 2), (height / 2));
+		glfwSetCursorPos(window, centreX, centreY);
 	}
 	else if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_RELEASE)
 	{
@@ -125,4 +150,10 @@ void Camera::Inputs(GLFWwindow* window)
 		// Makes sure the next time the camera looks around it doesn't jump
 		firstClick = true;
 	}
+}
+
+void Camera::setOrbitSettings(float speed, float distance, float height) {
+	orbitSpeed = speed;
+	orbitDistance = distance;
+	orbitHeight = height;
 }

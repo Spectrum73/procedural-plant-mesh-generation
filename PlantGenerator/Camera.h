@@ -20,6 +20,13 @@ public:
 	glm::vec3 Up = glm::vec3(0.0f, 1.0f, 0.0f);
 	glm::mat4 cameraMatrix = glm::mat4(1.0f);
 
+	// Orbit Settings - Public so ImGui can adjust them more easily
+	bool orbiting = true;
+	float orbitSpeed = 0.2f;
+	float orbitDistance = 12.0f;
+	float orbitHeight = 2.0f;
+	float orbitRotation = 0.0f;
+
 	// Prevents the camera from jumping around when first clicking left click
 	bool firstClick = true;
 
@@ -35,20 +42,23 @@ public:
 	float speed = 1.0f;
 	float sensitivity = 100.0f;
 
+	float deltaTime = 0.0f;
 	float currentFrame = 0;
 	float lastFrame = 0;
 
 	// Camera constructor to set up initial values
 	Camera(int width, int height, glm::vec3 position);
 
+	void calculateDeltaTime();
 	// Updates the camera matrix to the Vertex Shader
 	void updateMatrix(float aFOVdeg, float aNearPlane, float aFarPlane);
 	void updateMatrix() { updateMatrix(FOVdeg, nearPlane, farPlane); }
 	// Exports the camera matrix to a shader
 	void Matrix(Shader& shader, const char* uniform);
 	// Handles camera inputs
-	void Inputs(GLFWwindow* window);
+	void Inputs(GLFWwindow* window, int aMouseSnapPosX = -1, int aMouseSnapPosY = -1);
 	// Adjust the width and height.
 	void setWidthAndHeight(int aWidth, int aHeight) { width = aWidth, height = aHeight, updateMatrix(); }
+	void setOrbitSettings(float speed, float distance, float height);
 };
 #endif

@@ -5,6 +5,7 @@
 #include "Mesh.h"
 #include "Curve.h"
 #include "PlantGeneration.h"
+#include "FrameBuffer.h"
 
 #include <iostream>
 #include <fstream>
@@ -14,7 +15,6 @@
 #define WINDOW_WIDTH 800
 #define WINDOW_HEIGHT 800
 #define FOV_RADIANS 45.0f
-#define WIREFRAME false
 #define BACKFACE_CULLING true
 
 // TEMPORARY
@@ -67,6 +67,12 @@ GLuint lightIndices[] =
 
 // Defined globally so it can be accessed by framebuffer_size_callback
 Camera camera = Camera(WINDOW_WIDTH, WINDOW_HEIGHT, glm::vec3(0.0f, 1.0f, 0.0f));
+FBO frameBuffer;
+bool MainWindowFocused = false;
+char filename[30] = "mesh";
+int shaderIndex = 0;
+bool wireframe = false;
+
 // Defined globally so it can be accessed via key_callback
 int plantIndex = 0;
 std::vector<Plant*> Plants;
@@ -88,7 +94,7 @@ void SaveCurrentPlant() {
 	// Generate the file name
 	// Name format: {name}_{ID}_{LOD}.obj
 	std::string directory = "generations/";
-	std::string baseName = "mesh_000_";
+	std::string baseName = std::string(filename) + '_';
 
 	for (int i = 0; i < Plants.size(); i++) {
 		// Create and open a text file
@@ -133,9 +139,22 @@ void SaveCurrentPlant() {
 				+ ind2 + "\n";
 		}
 
+		std::cout << "File saved as: " << directory + baseName + std::to_string(i) + ".obj" << std::endl;
+
 		// Close the file
 		MyFile.close();
 	}
+}
+
+// Helper for ImGui alignment
+// https://github.com/ocornut/imgui/discussions/3862
+void AlignForWidth(float width, float alignment = 0.5f)
+{
+	ImGuiStyle& style = ImGui::GetStyle();
+	float avail = ImGui::GetContentRegionAvail().x;
+	float off = (avail - width) * alignment;
+	if (off > 0.0f)
+		ImGui::SetCursorPosX(ImGui::GetCursorPosX() + off);
 }
 
 // This function is executed whenever the window is resized by any means
@@ -143,11 +162,17 @@ void framebuffer_size_callback(GLFWwindow* window, int aWidth, int aHeight) {
 	if (aWidth < 1 || aHeight < 1) return;
 
 	glViewport(0, 0, aWidth, aHeight);
-	camera.setWidthAndHeight(aWidth, aHeight);
+	//camera.setWidthAndHeight(aWidth, aHeight);
+	frameBuffer.RescaleFrameBuffer(aWidth, aHeight);
+}
+
+void scene_size_callback(int aWidth, int aHeight) {
+	
 }
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
+	if (!MainWindowFocused) return;
 	if (key == GLFW_KEY_1 && action == GLFW_PRESS) {
 		if (plantIndex > 0)
 			plantIndex--;
@@ -198,6 +223,9 @@ int main()
 	gladLoadGL();
 	glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
 
+	// Generate the Framebuffer
+	frameBuffer = *(new FBO(WINDOW_WIDTH, WINDOW_HEIGHT));
+
 	// Texture
 	std::string texPath = "";
 
@@ -208,6 +236,8 @@ int main()
 	
 	// Generates Shader object using shaders defualt.vert and default.frag
 	Shader shaderProgram("default.vert", "default.frag");
+	Shader normalShader("default.vert", "normals.frag");
+	Shader basicLitShader("default.vert", "basic_lighting.frag");
 	// Shader for light (to display an object where it's coming from)
 	Shader lightShader("light.vert", "light.frag");
 
@@ -287,6 +317,13 @@ int main()
 	glUniformMatrix4fv(glGetUniformLocation(shaderProgram.ID, "model"), 1, GL_FALSE, glm::value_ptr(objectModel));
 	glUniform4f(glGetUniformLocation(shaderProgram.ID, "lightColor"), lightColor.x, lightColor.y, lightColor.z, lightColor.w);
 	glUniform3f(glGetUniformLocation(shaderProgram.ID, "lightPos"), lightPos.x, lightPos.y, lightPos.z);
+	// Bind the uniforms for the mesh
+	basicLitShader.Activate();
+	glUniformMatrix4fv(glGetUniformLocation(basicLitShader.ID, "model"), 1, GL_FALSE, glm::value_ptr(objectModel));
+	glUniform4f(glGetUniformLocation(basicLitShader.ID, "lightColor"), lightColor.x, lightColor.y, lightColor.z, lightColor.w);
+	glUniform3f(glGetUniformLocation(basicLitShader.ID, "lightPos"), lightPos.x, lightPos.y, lightPos.z);
+	normalShader.Activate();
+	glUniformMatrix4fv(glGetUniformLocation(normalShader.ID, "model"), 1, GL_FALSE, glm::value_ptr(objectModel));
 
 	float rotation = 0.0f;
 	double prevTime = glfwGetTime();
@@ -294,20 +331,40 @@ int main()
 	// Enables the depth buffer and wireframe view if enabled
 	glEnable(GL_DEPTH_TEST);
 	if (BACKFACE_CULLING) glEnable(GL_CULL_FACE);
-	if (WIREFRAME) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	if (wireframe) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+	// GUI Setup
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+	ImGuiIO& io = ImGui::GetIO(); (void)io;
+	ImGui::StyleColorsDark();
+	// Enable Docking
+	ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+	// Prevent moving windows unless dragging title bar
+	ImGui::GetIO().ConfigWindowsMoveFromTitleBarOnly = true;
+	ImGui_ImplGlfw_InitForOpenGL(window, true);
+	ImGui_ImplOpenGL3_Init("#version 330");
 
 	while (!glfwWindowShouldClose(window)) 
 	{
 		// Clean back buffer and assign our colour to it
 		glClearColor(0.12f, 0.07f, 0.09f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		camera.calculateDeltaTime();
+
+		// Declare new ImGui frame
+		ImGui_ImplOpenGL3_NewFrame();
+		ImGui_ImplGlfw_NewFrame();
+		ImGui::NewFrame();
+
+		frameBuffer.Bind();
 
 		shaderProgram.Activate();
 
-		// Handle camera inputs and update its matrix to export to the vertex shader
-		camera.Inputs(window);
-		camera.updateMatrix(FOV_RADIANS, 0.1f, 100.0f);
-
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		glClearColor(0.12f, 0.07f, 0.09f, 1.0f);
+		if (BACKFACE_CULLING) glEnable(GL_CULL_FACE);
+		if (wireframe) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
 		float currentTime = glfwGetTime();
 		if (currentTime - prevTime >= 1 / 60) 
@@ -325,24 +382,121 @@ int main()
 		//curve3.Draw(shaderProgram, camera);
 		//basicCurve.Draw(shaderProgram, camera);
 
-		light.Draw(lightShader, camera);
+		//light.Draw(lightShader, camera);
+
+		// Decide which shader to use
+		Shader* shader = &shaderProgram;
+		switch (shaderIndex)
+		{
+		case 0:
+			shader = &shaderProgram;
+			break;
+		case 1:
+			shader = &basicLitShader;
+			break;
+		case 2:
+			shader = &normalShader;
+			break;
+		default:
+			break;
+		}
 
 		switch (plantIndex) {
 		case 0:
-			testPlant.Draw(shaderProgram, camera);
+			testPlant.Draw(*shader, camera);
 			break;
 		case 1:
-			LOD1_Plant.Draw(shaderProgram, camera);
+			LOD1_Plant.Draw(*shader, camera);
 			break;
 		}
+
+		frameBuffer.Unbind();
+
+		ImGui::Begin("Plant Parameters");
+		ImGui::TextWrapped("Adjust the generated plant.");
+		// Align the button to the middle
+		ImGui::SetCursorPosX((ImGui::GetWindowWidth()-150.0f)/2);
+		if (ImGui::Button("Regenerate", ImVec2(150.0f, 0.0f)))
+			RegeneratePlants();
+		ImGui::End();
+
+		ImGui::Begin("Export Settings");
+		ImGui::TextWrapped("Change how the OBJ files are exported. Files are saved under /generations");
+		ImGui::NewLine();
+		ImGui::Text("Filename: ");
+		ImGui::SameLine();
+		ImGui::InputText("##mesh", filename, IM_ARRAYSIZE(filename));
+		if (ImGui::Button("Save as Wavefront .OBJ"))
+			SaveCurrentPlant();
+		ImGui::End();
+
+		ImGui::Begin("Camera Settings");
+		ImGui::TextWrapped("Tweak how the camera performs.");
+		ImGui::RadioButton("Textured", &shaderIndex, 0); ImGui::SameLine();
+		ImGui::RadioButton("Basic Lit", &shaderIndex, 1); ImGui::SameLine();
+		ImGui::RadioButton("Normals", &shaderIndex, 2);
+		if (ImGui::Checkbox("Wireframe", &wireframe)) {
+			if (wireframe) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+			else glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+		}
+		ImGui::Text("Orbit Settings");
+		ImGui::Checkbox("Orbit", &camera.orbiting);
+		ImGui::SliderFloat("Orbit Distance", &camera.orbitDistance, 1.0f, 25.0f);
+		ImGui::SliderFloat("Orbit Height", &camera.orbitHeight, -2.0f, 6.0f);
+		ImGui::SliderFloat("Orbit Speed", &camera.orbitSpeed, -5.0f, 5.0f);
+		ImGui::End();
+
+		ImGui::Begin("Scene");
+		{
+			ImGui::BeginChild("SceneRender");
+			if (ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows) && ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+				// Handle camera inputs and update its matrix to export to the vertex shader
+				MainWindowFocused = true;
+				camera.Inputs(window, ImGui::GetWindowPos().x + ImGui::GetWindowWidth() / 2, ImGui::GetWindowPos().y + ImGui::GetWindowHeight() / 2);
+				ImGui::SetMouseCursor(ImGuiMouseCursor_None);
+			}
+			else {
+				MainWindowFocused = false;
+				// Reset the flag to detect the first click for the camera (to prevent snapping)
+				camera.firstClick = true;
+			}
+			camera.updateMatrix(FOV_RADIANS, 0.1f, 100.0f);
+
+			ImVec2 viewportPanelSize = ImGui::GetContentRegionAvail();
+			ImVec2 sceneSize = { viewportPanelSize.x, viewportPanelSize.y };
+			// On window resize
+			if (frameBuffer.size.x != sceneSize.x || frameBuffer.size.y != sceneSize.y) {
+				frameBuffer.size = viewportPanelSize;
+				scene_size_callback(frameBuffer.size.x, frameBuffer.size.y);
+			}
+
+			float width = ImGui::GetContentRegionAvail().x;
+			float height = ImGui::GetContentRegionAvail().y;
+
+			camera.setWidthAndHeight(width, height);
+			ImGui::Image((ImTextureID)frameBuffer.GetTextureID(), ImGui::GetContentRegionAvail(), ImVec2{ 0, 1 }, ImVec2{ 1, 0 });
+		}
+		ImGui::EndChild();
+		ImGui::End();
+
+		// Render UI Elements
+		ImGui::Render();
+		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
 		// Swap back buffer with front buffer
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}
 
+	// End ImGui Processes
+	ImGui_ImplOpenGL3_Shutdown();
+	ImGui_ImplGlfw_Shutdown();
+	ImGui::DestroyContext();
+
 	// Clean up objects we've made
 	shaderProgram.Delete();
+	normalShader.Delete();
+	basicLitShader.Delete();
 	lightShader.Delete();
 	// Delete window and terminate GLFW before ending the program
 	glfwDestroyWindow(window);
