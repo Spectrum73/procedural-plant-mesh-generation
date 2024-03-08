@@ -97,6 +97,8 @@ struct PlantParameters {
 	int RootCircumferenceEdges = 8; // The number of edges per circumference on each curve's mesh
 	int RootCurveSegments = 6; // The number of segments in the curve's mesh.
 
+	float Decay = 0.96f;
+
 	float AAV; // ApicalAngleVariance | Variance of the angular difference between the growth direction and the direction of the apical bud.
 	int NLB; // NbLateralBuds | The number of lateral buds that are created per each node of a growing shoot.
 	float BAM; // Branching Angle Mean |
