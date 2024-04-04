@@ -96,6 +96,7 @@ private:
 struct PlantParameters {
 	int RootCircumferenceEdges = 8; // The number of edges per circumference on each curve's mesh
 	int RootCurveSegments = 6; // The number of segments in the curve's mesh.
+	float RootWidth = 0.4f;
 
 	float Decay = 0.96f;
 
