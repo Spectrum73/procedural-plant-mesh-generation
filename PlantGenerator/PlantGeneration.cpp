@@ -1,6 +1,6 @@
 #include "PlantGeneration.h"
 
-Plant::Plant(PlantParameters aParams) : RootNode(NodeType::APICAL_BUD, glm::vec3(0.0f), glm::vec3(0.0f, 0.5f, 0.0f), 0.5f, aParams.RootCircumferenceEdges, aParams.RootCurveSegments, this, aParams.ApicalBudExtinction, aParams.GrowthRate) {
+Plant::Plant(PlantParameters aParams) : RootNode(NodeType::APICAL_BUD, glm::vec3(0.0f), glm::vec3(0.0f, 0.5f, 0.0f), aParams.RootWidth, aParams.RootCircumferenceEdges, aParams.RootCurveSegments, this, aParams.ApicalBudExtinction, aParams.GrowthRate) {
 	parameters = aParams;
 }
 
@@ -84,7 +84,7 @@ void Plant::GenerateGraph() {
 		RootNode.setDead(false);
 
 		// Keeping a pointer to the old one and deleting was crashing so I'm assuming this overwrites the old one
-		RootNode = (Node(NodeType::APICAL_BUD, glm::vec3(0.0f), glm::vec3(0.0f, 0.5f, 0.0f), 0.5f, parameters.RootCircumferenceEdges, parameters.RootCurveSegments, this, parameters.ApicalBudExtinction, parameters.GrowthRate));
+		RootNode = (Node(NodeType::APICAL_BUD, glm::vec3(0.0f), glm::vec3(0.0f, 0.5f, 0.0f), parameters.RootWidth, parameters.RootCircumferenceEdges, parameters.RootCurveSegments, this, parameters.ApicalBudExtinction, parameters.GrowthRate));
 	}
 
 	GenerateInternode(&RootNode, chanceDecay); // force at least one bud to grow from the root.
@@ -105,8 +105,10 @@ void Plant::CopyGraph(Plant* copyTarget) {
 
 // Creates a curve by passing in two nodes and the desired circumference subdivisions and number of segments.
 Curve makeCurveFromNodes(Node* firstNode, Node* secondNode, int aSubdivisions, int aSegments) {
+	// We have to offset to add a slight overlap so that the boolean union operation detects they're connected
+	glm::vec3 offset = firstNode->getPosition() - secondNode->getPosition();
 	return Curve(aSubdivisions, aSegments, firstNode->getWidth(), secondNode->getWidth(),
-		firstNode->getPosition(),
+		firstNode->getPosition() ,//+ offset*0.03f,
 		secondNode->getPosition(),
 		firstNode->getControlPoint(),
 		-secondNode->getControlPoint()); // This is inverted to make sure that connected curves match correctly
@@ -138,8 +140,19 @@ void Plant::GenerateMesh(int aEdgeReduction, int aSegmentReduction) {
 		addCurvesFromNode(&RootNode, this->curves, aEdgeReduction, aSegmentReduction);
 
 	// Concatenate all curve meshes to our main plant mesh
+	
 	for (Curve& curve : this->curves)
 	{
 		this->Concatenate(curve);
+		// Merge after every connection rather than at the end so that mesh cutting is cleaner and easier
+		MergeVerticesByDistance(0.03f);
 	}
+	RecalculateNormals();
+	
+	/*if (curves.size() > 2) {
+		std::cout << "Attempting to concatenate" << std::endl;
+		this->Concatenate(curves[0]);
+		this->Concatenate(curves[1]);
+		this->Concatenate(curves[2]);
+	}*/
 }

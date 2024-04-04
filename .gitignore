@@ -396,3 +396,8 @@ FodyWeavers.xsd
 
 # JetBrains Rider
 *.sln.iml
+
+PlantGenerator/Libraries/lib/mcut.lib
+PlantGenerator/Libraries/lib/mcutd.lib
+PlantGenerator/Libraries/lib/mio.lib
+PlantGenerator/Libraries/lib/miod.lib

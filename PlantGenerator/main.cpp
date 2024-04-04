@@ -17,7 +17,7 @@
 #define WINDOW_WIDTH 800
 #define WINDOW_HEIGHT 800
 #define FOV_RADIANS 45.0f
-#define BACKFACE_CULLING true
+#define BACKFACE_CULLING false
 
 // TEMPORARY
 
@@ -291,7 +291,7 @@ int main()
 
 	plantParams.Decay = 0.96f;
 	plantParams.ApicalBudExtinction = 0.05f;
-	plantParams.GrowthRate = 0.6f;
+	plantParams.GrowthRate = 0.4f;
 	plantParams.RootCircumferenceEdges = 8;
 	plantParams.RootCurveSegments = 6;
 	Plant mainPlant = new Plant(plantParams);
@@ -447,6 +447,8 @@ int main()
 			plantParams.RootCircumferenceEdges = clamp(plantParams.RootCircumferenceEdges, 3, 256);
 		if (ImGui::InputInt("Root Curve Segments", &plantParams.RootCurveSegments, 1))
 			plantParams.RootCurveSegments = clamp(plantParams.RootCurveSegments, 1, 256);
+		if (ImGui::InputFloat("Root Width", &plantParams.RootWidth, 0.01f))
+			plantParams.RootWidth = clamp(plantParams.RootWidth, 0.01f, 5.0f);
 
 		ImGui::PopItemWidth();
 		ImGui::End();

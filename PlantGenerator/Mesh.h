@@ -9,6 +9,8 @@
 #include "Camera.h"
 #include "Texture.h"
 
+#define CONCATENATE_WITH_UNION false
+
 struct MeshData {
 	std::vector <Vertex> vertices;
 	std::vector <GLuint> indices;
@@ -32,12 +34,19 @@ public:
 	Mesh(std::vector <Vertex>& vertices, std::vector <GLuint>& indices, std::vector <Texture>& textures);
 	Mesh(MeshData data) : Mesh(data.vertices, data.indices, data.textures) {}
 
+
+	std::vector<float> getVertexPositionVector();
+	std::vector<int> getIndexVector();
+
 	// Draws the mesh
 	void Draw(Shader& shader, Camera& camera);
 
 	// Concatenates the passed mesh onto this mesh.
 	void Concatenate(Mesh& aMesh);
 	void Concatenate(std::vector<Mesh*> aMeshes);
+
+	void MergeVerticesByDistance(float distance = 0.01f);
+	void RecalculateNormals();
 
 	// Empties the mesh's vectors
 	void Delete();

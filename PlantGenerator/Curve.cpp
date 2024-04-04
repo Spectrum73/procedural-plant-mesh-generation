@@ -1,6 +1,6 @@
 #include "Curve.h"
 
-MeshData Curve::calculateMesh(int aSubdivisions, float startWidth, float endWidth, glm::vec3 a, glm::vec3 b, glm::vec3 c1, glm::vec3 c2)
+MeshData Curve::calculateMesh(int aSubdivisions, float startWidth, float endWidth, glm::vec3 a, glm::vec3 b, glm::vec3 c1, glm::vec3 c2, bool aCapped)
 {
 	Texture textures[]
 	{
@@ -85,6 +85,68 @@ MeshData Curve::calculateMesh(int aSubdivisions, float startWidth, float endWidt
 			}
 		}
 	}
+
+	// Setup for caps; this isn't done in the loop as to not alter indexing of vertices
+	// Bottom Cap
+	int ringIndex = 0;
+	float t = (float)ringIndex / (float)(nbRings - 1);
+	glm::vec3 startPosition = Evaluate(t);
+	// If we are on the final ring there is no next ring, so we use the previous one instead
+	glm::vec3 endPosition = Evaluate((ringIndex + 1) / (float)(nbRings - 1));
+	glm::vec3 direction;
+	// For the first and last rings we make them look towards the control points, this ensures consistent start/end points no matter the detail
+	if (ringIndex + 1 == nbRings) direction = -glm::normalize(c2);
+	else if (ringIndex == 0) direction = glm::normalize(c1);
+	// The aim of this is to copy the prior ring's rotation
+	else direction = glm::normalize(endPosition - startPosition);
+
+	// Add caps to the curve if requested
+	if (aCapped && (ringIndex == 0 || ringIndex == nbRings - 1)) {
+		glm::vec3 vertexNormal = ringIndex == 0 ? -direction : direction;
+		vertices.push_back(Vertex{ startPosition, vertexNormal, glm::vec3((float)ringIndex / (float)(nbRings - 1)), glm::vec2((float)ringIndex / (float)(nbRings - 1)) });
+
+		// Create cap faces
+		for (int i = 0; i < aSubdivisions; i++)
+		{
+			//int offset = (i - 1) + (ringIndex - 1) * aSubdivisions;
+			if (i == aSubdivisions - 1) {
+				indices.push_back((GLuint)0); indices.push_back((GLuint)0 + i); indices.push_back((GLuint)vertices.size() - 1);
+			}
+			else {
+				indices.push_back((GLuint)1 + i); indices.push_back((GLuint)0 + i); indices.push_back((GLuint)vertices.size() - 1);
+			}
+		}
+	}
+
+	// Top Cap
+	ringIndex = nbRings-1;
+	t = (float)ringIndex / (float)(nbRings - 1);
+	startPosition = Evaluate(1.0f);
+	// If we are on the final ring there is no next ring, so we use the previous one instead
+	endPosition = Evaluate((ringIndex + 1) / (float)(nbRings - 1));
+	// For the first and last rings we make them look towards the control points, this ensures consistent start/end points no matter the detail
+	if (ringIndex + 1 == nbRings) direction = -glm::normalize(c2);
+	else if (ringIndex == 0) direction = glm::normalize(c1);
+	// The aim of this is to copy the prior ring's rotation
+	else direction = glm::normalize(endPosition - startPosition);
+
+	// Add caps to the curve if requested
+	if (aCapped && (ringIndex == 0 || ringIndex == nbRings - 1)) {
+		vertices.push_back(Vertex{ startPosition, -direction, glm::vec3((float)ringIndex / (float)(nbRings - 1)), glm::vec2((float)ringIndex / (float)(nbRings - 1)) });
+
+		// Create cap faces
+		for (int i = 0; i < aSubdivisions; i++)
+		{
+			int offset = (i) + (ringIndex) * aSubdivisions;
+			if (i == aSubdivisions - 1) {
+				indices.push_back((GLuint)0 + offset); indices.push_back((GLuint)(ringIndex)*aSubdivisions);  indices.push_back((GLuint)vertices.size() - 1);
+			}
+			else {
+				indices.push_back((GLuint)0 + offset); indices.push_back((GLuint)1 + offset);  indices.push_back((GLuint)vertices.size() - 1);
+			}
+		}
+	}
+
 
 	// Store Texture Data
 	std::vector <Texture> tex(textures, textures + sizeof(textures) / sizeof(Texture));
