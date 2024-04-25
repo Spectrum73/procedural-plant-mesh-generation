@@ -82,13 +82,13 @@ std::vector<int> Mesh::getIndexVector() {
 	return std::vector<int>(indices.begin(), indices.end()); 
 }
 
-void Mesh::Concatenate(Mesh& aMesh)
+void Mesh::Concatenate(Mesh& aMesh, bool doUnion)
 {
 	int boolStatus = 0;
-	if (CONCATENATE_WITH_UNION)
+	if (doUnion)
 		boolStatus = BooleanUnion(*this, aMesh) != 0;
 	boolStatus = 0; // TEMPORARY
-	if (!CONCATENATE_WITH_UNION || boolStatus != 0) {
+	if (!doUnion || boolStatus != 0) {
 		// Append vertices
 		int indexOffset = vertices.size();
 		vertices.reserve(vertices.size() + aMesh.vertices.size());

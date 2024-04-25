@@ -42,7 +42,7 @@ public:
 	void Draw(Shader& shader, Camera& camera);
 
 	// Concatenates the passed mesh onto this mesh.
-	void Concatenate(Mesh& aMesh);
+	void Concatenate(Mesh& aMesh, bool doUnion = false);
 	void Concatenate(std::vector<Mesh*> aMeshes);
 
 	void MergeVerticesByDistance(float distance = 0.01f);

@@ -112,7 +112,6 @@ void Camera::Inputs(GLFWwindow* window, int aMouseSnapPosX, int aMouseSnapPosY)
 		if (firstClick)
 		{
 			glfwSetCursorPos(window, centreX, centreY);
-			std::cout << "WORK" << std::endl;
 			firstClick = false;
 		}
 

@@ -1,6 +1,6 @@
 #include "PlantGeneration.h"
 
-Plant::Plant(PlantParameters aParams) : RootNode(NodeType::APICAL_BUD, glm::vec3(0.0f), glm::vec3(0.0f, 0.5f, 0.0f), aParams.RootWidth, aParams.RootCircumferenceEdges, aParams.RootCurveSegments, this, aParams.ApicalBudExtinction, aParams.GrowthRate) {
+Plant::Plant(PlantParameters aParams) : RootNode(NodeType::APICAL_BUD, glm::vec3(0.0f), glm::vec3(0.0f, 0.5f, 0.0f), aParams.RootWidth, glm::vec3(0.0f, 1.0f, 0.0f), aParams.RootCircumferenceEdges, aParams.RootCurveSegments, this, aParams.ApicalBudExtinction, aParams.GrowthRate) {
 	parameters = aParams;
 }
 
@@ -40,60 +40,138 @@ int ResolveSegments(float length, int parentSegments) {
 }
 
 // creates an internode connected to the provided parent
-void Plant::GenerateInternode(Node* parent, float chanceDecay) {
-	float dChance = parent->getDeathChance() / chanceDecay;
-	float gChance = parent->getGrowthChance() * chanceDecay;
-	if (dChance >= 1.0f) return;
-	std::cout <<  "DEATH CHANCE : " + std::to_string(dChance) + " | GROWTH CHANCE : " + std::to_string(gChance) << std::endl;
-	std::cout << std::to_string(parent->getPosition().x) + " , " + std::to_string(parent->getPosition().y) + " , " + std::to_string(parent->getPosition().z) << std::endl;
-	glm::vec3 location = parent->getPosition() + glm::vec3(getRandomFloat(-0.9f, 0.9f), getRandomFloat(0.4f, 1.0f), getRandomFloat(-0.9f, 0.9f));
-	glm::vec3 control = glm::vec3(0.0f, 0.5f, 0.0f);
-	float w = parent->getWidth() * getRandomFloat(0.6f, 0.8f);
+void Plant::GenerateInternode(Node* parent) {
+	// First we determine whether we're growing an apical or lateral bud.
+	NodeType tp = NodeType::LATERAL_BUD;
+	if (parent->getType() == NodeType::APICAL_BUD && parent->getChildren().size() == 0) {
+		// If no children exist already and the parent is apical then this bud is apical
+		tp = NodeType::APICAL_BUD;
+	}
+
+	float dChance = tp == NodeType::APICAL_BUD ? parameters.ApicalBudExtinction : parameters.LateralBudExtinction;
+	float gChance = parent->getGrowthChance() * pow(parameters.InternodeAgeFactor, parameters.t);
+
+	// Calculate the branch's direction and width
+	glm::vec3 branchDirection;
+	float w;
+	if (tp == NodeType::APICAL_BUD) // Apical bud
+	{
+		w = parent->getWidth()* getRandomFloat(0.6f, 0.8f);
+
+		// Convert apical angle variance to radians
+		float AAVrad = parameters.AAV * glm::pi<float>() / 180.0f;
+		// Apical branching angle calculations
+		float theta = normalRand(0, AAVrad);
+		float phi = uniformRand(0.0f, 2.0f * glm::pi<float>());
+
+		branchDirection = sphericalToCartesian(theta, phi);
+	}
+	else // Lateral bud
+	{
+		w = parent->getWidth()* getRandomFloat(0.2f, 0.4f);
+		if (w < 0.1f) w = 0.05f;
+
+		// Generate branch roll and angles
+		float branchingAngle;
+		
+		float rollAngle;
+		// If we are branching off an apical node we have a wider range of points to branch in
+		if (parent->getType() == NodeType::APICAL_BUD) {
+			branchingAngle = normalRand(parameters.BAM, parameters.BAV);
+			// Convert to radians
+			branchingAngle = branchingAngle * glm::pi<float>() / 180.0f;
+
+			rollAngle = uniformRand(0.0f, 2.0f * glm::pi<float>());
+		}
+		else {
+			float AAVrad = parameters.AAV * glm::pi<float>() / 180.0f;
+			branchingAngle = -normalRand(0, AAVrad);
+			// Convert to radians
+			branchingAngle = branchingAngle * glm::pi<float>() / 180.0f;
+
+			// Generate random roll angle
+			rollAngle = normalRand(parameters.RAM, parameters.RAV);
+			rollAngle = rollAngle * glm::pi<float>() / 180.0f;
+		}
+
+		branchDirection = sphericalToCartesian(branchingAngle, rollAngle);
+	}
+
+	float branchLength = parameters.InternodeLength * pow(parameters.InternodeAgeFactor, parameters.t);
+	fprintf(stdout, "%f %f %f\n", branchDirection.x, branchDirection.y, branchDirection.z);
+
+	// Generate curve positional points
+	branchDirection = glm::normalize(branchDirection);
+	if (tp == LATERAL_BUD && parent->getType() == LATERAL_BUD)
+		branchDirection += parent->getDirection();
+	branchDirection = glm::normalize(branchDirection);
+
+	// Bending force calculation
+	// Gravitropism
+	glm::vec3 horizontalDirection = branchDirection;
+	horizontalDirection.y = 0;
+	horizontalDirection = horizontalDirection * branchLength;
+	glm::vec3 bending = GRAVITY * parameters.Gravitropism * w * glm::length(horizontalDirection * branchLength);
+	if (tp == LATERAL_BUD) {
+		branchDirection += bending;
+		branchDirection = glm::normalize(branchDirection);
+	}
+
+	// Phototropism
+	branchDirection += parameters.Phototropism * -glm::normalize(parameters.lightDirection);
+	branchDirection = glm::normalize(branchDirection);
+
+	//glm::vec3 location = parent->getPosition() + glm::vec3(getRandomFloat(-0.9f, 0.9f), getRandomFloat(0.4f, 1.0f), getRandomFloat(-0.9f, 0.9f));
+	glm::vec3 location = parent->getPosition() + branchDirection * branchLength;
+	//glm::vec3 control = glm::vec3(0.0f, .5f, 0.0f);
+	glm::vec3 control = (parent->getPosition() - location) * -0.5f;
+
 	int edges = ResolveEdges(w, parent->getEdges());
 	int segments = ResolveSegments(glm::distance(location, parent->getPosition()), parent->getSegments());
 	std::cout << "EDGES : " + std::to_string(edges) + "| SEGMENTS : " + std::to_string(segments) << std::endl;
-	Node* internode = new Node(NodeType::APICAL_BUD, location, control, w, edges, segments, this, dChance, gChance);
+	Node* internode = new Node(tp, location, control, w, branchDirection, edges, segments, this, dChance, gChance);
 	parent->AddChild(internode);
 }
 
 // Recursive function to perform a growth cycle on a given node and its children
-void Plant::SimulateGrowthCycle(Node* node, float chanceDecay) {
+void Plant::SimulateGrowthCycle(Node* node) {
 	float r = getRandomFloat(0.0f, 1.0f);
-	//std::cout << "DEAD? " + std::to_string(r) << std::endl;
-	node->setDead(r <= node->getDeathChance()); // Does the node die?
 	if (!node->isDead()) {
-		if (getRandomFloat(0.0f, 1.0f) <= node->getGrowthChance()) { // Does this node grow a shoot
-			GenerateInternode(node, chanceDecay);
-			node->setType(NodeType::SEGMENT);
-			node->setDead(true);
-		}
+		node->setGrowthChance(node->getGrowthChance() * parameters.InternodeAgeFactor);
+		node->setDead(r <= node->getDeathChance()); // Does the node die?
+		if (!node->isDead())
+			if (getRandomFloat(0.0f, 1.0f) <= node->getGrowthChance()) // Does this node grow a shoot
+				GenerateInternode(node);
 	}
-	node->setDeathChance(node->getDeathChance() * 1.5f);
 
 	if (!node->getChildren().empty()) {
 		for (Node* childNode : node->getChildren())
-			SimulateGrowthCycle(childNode, chanceDecay); // Simulate the children, must be done before growing
+			SimulateGrowthCycle(childNode); // Simulate the children, must be done before growing
 	}
 }
 
 void Plant::GenerateGraph() {
-	float chanceDecay = parameters.Decay; // Each child's death chance = parent's deathChance / chanceDecay
+	parameters.t = 0;
+
 	// If plant has already grown (we are regenerating)
-	if (!hasLivingBuds()) {
+	if (RootNode.getChildren().size() > 0) {
 		RootNode.getChildren().clear();
 		RootNode.setDead(false);
 
 		// Keeping a pointer to the old one and deleting was crashing so I'm assuming this overwrites the old one
-		RootNode = (Node(NodeType::APICAL_BUD, glm::vec3(0.0f), glm::vec3(0.0f, 0.5f, 0.0f), parameters.RootWidth, parameters.RootCircumferenceEdges, parameters.RootCurveSegments, this, parameters.ApicalBudExtinction, parameters.GrowthRate));
+		RootNode = (Node(NodeType::APICAL_BUD, glm::vec3(0.0f), glm::vec3(0.0f, 0.5f, 0.0f), parameters.RootWidth, glm::vec3(0.0f, 1.0f, 0.0f), parameters.RootCircumferenceEdges, parameters.RootCurveSegments, this, parameters.ApicalBudExtinction, parameters.GrowthRate));
 	}
 
-	GenerateInternode(&RootNode, chanceDecay); // force at least one bud to grow from the root.
+	GenerateInternode(&RootNode); // force at least one bud to grow from the root.
 	RootNode.setGrowthChance(0.0f);
 
 
 	// Keep generating until all nodes are dead.
-	while (hasLivingBuds()) {
-		SimulateGrowthCycle(&RootNode, chanceDecay);
+	int growthCycles = 0;
+	while (growthCycles < parameters.maxAge) {
+		SimulateGrowthCycle(&RootNode);
+		parameters.t++; // Increase the tree's age
+		growthCycles++;
 	}
 	std::cout << "Graph Done!" << std::endl;
 	return;
@@ -107,7 +185,11 @@ void Plant::CopyGraph(Plant* copyTarget) {
 Curve makeCurveFromNodes(Node* firstNode, Node* secondNode, int aSubdivisions, int aSegments) {
 	// We have to offset to add a slight overlap so that the boolean union operation detects they're connected
 	glm::vec3 offset = firstNode->getPosition() - secondNode->getPosition();
-	return Curve(aSubdivisions, aSegments, firstNode->getWidth(), secondNode->getWidth(),
+
+	// If the branch segment has no children then we make the tip have close to zero width (vertices will be cleaned up during merging later)
+	float tipWidth = secondNode->getChildren().size() > 0 ? secondNode->getWidth() : 0.0001f;
+
+	return Curve(aSubdivisions, aSegments, firstNode->getWidth(), tipWidth,
 		firstNode->getPosition() ,//+ offset*0.03f,
 		secondNode->getPosition(),
 		firstNode->getControlPoint(),
@@ -129,6 +211,112 @@ void addCurvesFromNode(Node* node, std::vector<Curve>& curves, int aEdgeReductio
 	}
 }
 
+void GenerateFoliage(Node* node, Mesh &baseMesh, int foliageType) {
+	// Foliage Data
+	std::vector<Texture> FoliageTextures
+	{
+		Texture("textures/bark_0.png", "diffuse", 0, GL_RGBA, GL_UNSIGNED_BYTE)
+	};
+
+	std::vector<Vertex> planeVertices =
+	{ //               COORDINATES           /           NORMALS         /            COLORS          /       TEXTURE COORDINATES    //
+		Vertex{glm::vec3(-1.0f, 0.0f,  1.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(0.0f, 0.0f)},
+		Vertex{glm::vec3(-1.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(0.0f, 1.0f)},
+		Vertex{glm::vec3(1.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(1.0f, 1.0f)},
+		Vertex{glm::vec3(1.0f, 0.0f,  1.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(1.0f, 0.0f)}
+	};
+
+	std::vector<GLuint> planeIndices =
+	{
+		0, 1, 2,
+		0, 2, 3
+	};
+
+	std::vector<Vertex> domeVertices =
+	{ //               COORDINATES           /           NORMALS         /            COLORS          /       TEXTURE COORDINATES    //
+		// Base - 0
+		Vertex{glm::vec3(-1.0f, 0.0f,  1.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(-0.6f, 0.6f)},
+		Vertex{glm::vec3(-1.5f, 0.0f,  0.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(-1.0f, 0.0f)},
+		Vertex{glm::vec3(-1.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(-0.6f, -0.6f)},
+		Vertex{glm::vec3(-0.0f, 0.0f, -1.5f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(0.0f, -1.0f)},
+		Vertex{glm::vec3(1.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(0.6f, -0.6f)},
+		Vertex{glm::vec3(1.5f, 0.0f, -0.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(1.0f, 0.0f)},
+		Vertex{glm::vec3(1.0f, 0.0f,  1.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(0.6f, 0.6f)},
+		Vertex{glm::vec3(0.0f, 0.0f,  1.5f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(0.0f, 1.0f)},
+
+		// Second Level - 8
+		Vertex{glm::vec3(-0.5f, 0.5f,  0.5f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(-.3f, .3f)},
+		Vertex{glm::vec3(-0.5f, 0.5f, -0.5f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(-.3f, -.3f)},
+		Vertex{glm::vec3(0.5f, 0.5f, -0.5f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(.3f, -.3f)},
+		Vertex{glm::vec3(0.5f, 0.5f,  0.5f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(.3f, .3f)},
+
+		// Tip - 12
+		Vertex{glm::vec3(0.0f, 0.65f,  0.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(0.0f, 0.0f)}
+	};
+
+	std::vector<GLuint> domeIndices =
+	{
+		0, 8, 1,
+		1, 8, 9,
+		1, 9, 2,
+
+		2, 9, 3,
+		3, 9, 10,
+		3, 10, 4,
+
+		4, 10, 5,
+		5, 10, 11,
+		5, 11, 6,
+
+		6, 11, 7,
+		7, 11, 8,
+		7, 8, 0,
+
+		// Cap
+		12, 9, 8,
+		12, 10, 9,
+		12, 11, 10,
+		12, 8, 11
+	};
+
+	if (node != nullptr && !node->getChildren().empty()) {
+		// This node has children, unviable for foliage
+
+		PlantParameters pParams = node->getPlant()->getParameters();
+		for (Node* childNode : node->getChildren()) {
+			GenerateFoliage(childNode, baseMesh, foliageType);
+		}
+	}
+	else {
+		std::vector<Vertex>* verts;
+		std::vector<GLuint>* ind;
+		switch (foliageType)
+		{
+		case 1:
+			verts = &planeVertices;
+			ind = &planeIndices;
+			break;
+		case 2:
+			verts = &domeVertices;
+			ind = &domeIndices;
+			break;
+		default:
+			return;
+		}
+
+		float scale = 0.5f;
+		glm::vec3 offset = glm::vec3(0.0f, -0.2f, 0.0f);
+		for (int i = 0; i < verts->size(); i++) {
+			(*verts)[i].position *= scale;
+			(*verts)[i].position += offset;
+			(*verts)[i].position += node->getPosition();
+		}
+		// This node is an end node, it is viable for foliage
+		Mesh foliageMesh = Mesh(*verts, *ind, FoliageTextures);
+		baseMesh.Concatenate(foliageMesh);
+	}
+}
+
 void Plant::GenerateMesh(int aEdgeReduction, int aSegmentReduction) {
 	if (this->curves.size() > 0) {
 		this->curves.clear();
@@ -147,7 +335,10 @@ void Plant::GenerateMesh(int aEdgeReduction, int aSegmentReduction) {
 		// Merge after every connection rather than at the end so that mesh cutting is cleaner and easier
 		MergeVerticesByDistance(0.03f);
 	}
+	if (&RootNode != nullptr)
+		GenerateFoliage(&RootNode, *this, parameters.foliageType);
 	RecalculateNormals();
+
 	
 	/*if (curves.size() > 2) {
 		std::cout << "Attempting to concatenate" << std::endl;
