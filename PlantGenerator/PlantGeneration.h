@@ -1,11 +1,16 @@
 #ifndef PLANT_GENERATION_H
 #define PLANT_GENERATION_H
 
+#include <iostream>
 #include <glm/glm.hpp>
+#include <glm/gtc/constants.hpp>
+#include <glm/gtc/random.hpp>
 #include <vector>
 #include "Curve.h"
 #include "Camera.h"
-#include "RandomNumberGeneration.h"
+#include "Helpers.h"
+
+#define GRAVITY glm::vec3(.0f, -9.81f, .0f)
 
 /// <summary>
 /// Enumeration for types of nodes in the graph, 
@@ -29,11 +34,12 @@ class Plant;
 /// </summary>
 class Node {
 public:
-	Node(NodeType aType, glm::vec3 aLocalPosition, glm::vec3 aControlPoint, float aWidth, int aEdges, int aSegments, Plant* aPlant, float aDeathChance, float aGrowthChance, Node* parent = NULL) {
+	Node(NodeType aType, glm::vec3 aLocalPosition, glm::vec3 aControlPoint, float aWidth, glm::vec3 aDirection, int aEdges, int aSegments, Plant* aPlant, float aDeathChance, float aGrowthChance, Node* parent = NULL) {
 		type = aType;
 		localPosition = aLocalPosition;
 		controlPoint = aControlPoint;
 		width = aWidth;
+		direction = aDirection;
 		circumferenceEdges = aEdges;
 		curveSegments = aSegments;
 		growthChance = aGrowthChance;
@@ -43,7 +49,7 @@ public:
 		if (parent != NULL)
 			parent->AddChild(this);
 	}
-	Node(Node* copyNode, Plant* newPlant) : Node(copyNode->type, copyNode->localPosition, copyNode->controlPoint, copyNode->width, copyNode->circumferenceEdges, copyNode->curveSegments, newPlant, copyNode->deathChance, copyNode->growthChance) {
+	Node(Node* copyNode, Plant* newPlant) : Node(copyNode->type, copyNode->localPosition, copyNode->controlPoint, copyNode->width, copyNode->direction, copyNode->circumferenceEdges, copyNode->curveSegments, newPlant, copyNode->deathChance, copyNode->growthChance) {
 		for (int i = 0; i < copyNode->children.size(); i++) {
 			children.push_back(new Node(copyNode->children[i], newPlant));
 		}
@@ -71,10 +77,12 @@ public:
 	void setType(NodeType aType) { type = aType; }
 	int getEdges() { return circumferenceEdges; }
 	int getSegments() { return curveSegments; }
+	glm::vec3 getDirection() { return direction; }
 private:
 	NodeType type;
 	glm::vec3 localPosition;
 	float width;
+	glm::vec3 direction;
 	int circumferenceEdges = 8; // The number of edges per circumference on each curve's mesh
 	int curveSegments = 6; // The number of segments in the curve's mesh.
 	glm::vec3 controlPoint; // Bezier curve for this node's control point
@@ -96,42 +104,44 @@ private:
 struct PlantParameters {
 	int RootCircumferenceEdges = 8; // The number of edges per circumference on each curve's mesh
 	int RootCurveSegments = 6; // The number of segments in the curve's mesh.
-	float RootWidth = 0.4f;
+	float RootWidth = 0.2f;
 
 	float Decay = 0.96f;
 
-	float AAV; // ApicalAngleVariance | Variance of the angular difference between the growth direction and the direction of the apical bud.
+	float AAV = 25; // ApicalAngleVariance | Variance of the angular difference between the growth direction and the direction of the apical bud.
 	int NLB; // NbLateralBuds | The number of lateral buds that are created per each node of a growing shoot.
-	float BAM; // Branching Angle Mean |
-	float BAV; // Branching Angle Variance
-	float RAM; // Roll Angle Mean
-	float RAV; // Roll Angle Variance
+	float BAM = 41.0f; // Branching Angle Mean |
+	float BAV = 3.0f; // Branching Angle Variance
+	float RAM = 59.0f; // Roll Angle Mean
+	float RAV = 2.0f; // Roll Angle Variance
 
-	float ApicalBudExtinction; // Probability that a given bud will die during a single growth cycle.
-	float LateralBudExtinction;
+	float ApicalBudExtinction = 0.0f; // Probability that a given bud will die during a single growth cycle.
+	float LateralBudExtinction = 0.21f;
 	float ApicalLightFactor; // Influence of light on the growth probability of a bud.
 	float LateralLightFactor;
 	float ApicalDominance; // Control over Auxin factors in the plant.
 	float ApicalDominanceDistance;
 	float ApicalDominanceAgeFactor;
-	float GrowthRate; // The number of internodes generated on a single shoot duringone growth cycle.
+	float GrowthRate = 0.2f; // The number of internodes generated on a single shoot duringone growth cycle.
 
-	float InternodeLength; // The base length of a single internode and its relation to the tree age
-	float InternodeAgeFactor;
+	float InternodeLength = 0.75f; // The base length of a single internode and its relation to the tree age
+	float InternodeAgeFactor = 0.98;
 
 	float ApicalControlLevel; // The impact of the branch level on the growth rate and its relation to the tree age.
 	float ApicalControlAgeFactor;
 
-	float Phototropism; // The impact of the average direction of incoming light andgravity on the growth direction of a shoot.
-	float Gravitropism;
+	float Phototropism = 0.12f; // The impact of the average direction of incoming light andgravity on the growth direction of a shoot.
+	float Gravitropism = 0.43f;
 
 	float PruningFactor; // The impact of the amount of incoming light on the shedding of branches.
 	float LBPruningFactor; // LowBranchPruningFactor | The height below which all lateral branches are pruned.
 
-	float GravityBendingStrength; // The impact of gravity on branch structural bending and its relation to branch thickness
-	float GravityBendingAngle;
+	int foliageType = 2;
 
-	float t; // Growth time. Controls age and size.
+	int maxAge = 25;
+	int t = 0; // Growth time. Controls age and size. Current age of the tree
+
+	glm::vec3 lightDirection = glm::vec3(0.2f, -0.8f, 0.0f);
 };
 
 
@@ -148,9 +158,9 @@ public:
 private:
 	bool hasLivingBuds(); // Returns whether any buds are still alive
 	// creates an internode connected to the provided parent
-	void GenerateInternode(Node* parent, float chanceDecay);
+	void GenerateInternode(Node* parent);
 	// Recursive function to perform a growth cycle on a given node and its children
-	void SimulateGrowthCycle(Node* node, float chanceDecay);
+	void SimulateGrowthCycle(Node* node);
 	PlantParameters parameters;
 	Node RootNode;
 	std::vector<Curve> curves;

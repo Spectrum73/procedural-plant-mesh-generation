@@ -4,7 +4,7 @@ MeshData Curve::calculateMesh(int aSubdivisions, float startWidth, float endWidt
 {
 	Texture textures[]
 	{
-		Texture("terrible.png", "diffuse", 0, GL_RGBA, GL_UNSIGNED_BYTE)
+		Texture("textures/bark_0.png", "diffuse", 0, GL_RGBA, GL_UNSIGNED_BYTE)
 	};
 
 	// Calculate vertices
@@ -54,7 +54,15 @@ MeshData Curve::calculateMesh(int aSubdivisions, float startWidth, float endWidt
 				// They are first rotated to look at the next ring on the curve, then translated to the appropriate start position.
 				float width = t * endWidth + (1 - t) * startWidth;
 				glm::vec3 vert_dir = glm::vec3(ringRotation * glm::vec4((glm::vec3(x * width, y * width, 0.0f)), 0.0f));
-				vertices.push_back(Vertex{ vert_dir + startPosition, glm::normalize(vert_dir), glm::vec3((float)ringIndex / (float)(nbRings - 1)), glm::vec2((float)ringIndex / (float)(nbRings - 1))});
+
+				glm::vec2 tex_uv = glm::vec2(0);
+				if (ringIndex % 2 != 0) tex_uv.y = 1;
+				if (i % 2 != 0) tex_uv.x = 1;
+
+				// Old way of calculating tex_uv :
+				// glm::vec2((float)ringIndex / (float)(nbRings - 1))
+
+				vertices.push_back(Vertex{ vert_dir + startPosition, glm::normalize(vert_dir), glm::vec3((float)ringIndex / (float)(nbRings - 1)), tex_uv });
 
 				// Add the indices (face representations) for the segment.
 				// We do not create faces on the first loop as we only have 1 vertex

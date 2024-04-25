@@ -17,7 +17,7 @@
 #define WINDOW_WIDTH 800
 #define WINDOW_HEIGHT 800
 #define FOV_RADIANS 45.0f
-#define BACKFACE_CULLING false
+#define BACKFACE_CULLING true
 
 // TEMPORARY
 
@@ -72,7 +72,7 @@ Camera camera = Camera(WINDOW_WIDTH, WINDOW_HEIGHT, glm::vec3(0.0f, 1.0f, 0.0f))
 FBO frameBuffer;
 bool MainWindowFocused = false;
 char filename[30] = "mesh";
-int shaderIndex = 0;
+int shaderIndex = 2;
 bool wireframe = false;
 PlantParameters plantParams;
 int LOD_edgeReduction = 3; int LOD_segmentReduction = 2;
@@ -80,6 +80,9 @@ int LOD_edgeReduction = 3; int LOD_segmentReduction = 2;
 // Defined globally so it can be accessed via key_callback
 int plantIndex = 0;
 std::vector<Plant*> Plants;
+
+// Rendering time
+GLuint gpuTime;
 
 void RegeneratePlants() {
 	for (int i = 0; i < Plants.size(); i++) {
@@ -89,6 +92,7 @@ void RegeneratePlants() {
 			Plants[i]->GenerateMesh();
 		}
 		else {
+			Plants[i]->setParameters(plantParams);
 			Plants[i]->CopyGraph(Plants[0]);
 			Plants[i]->GenerateMesh(LOD_edgeReduction * i, LOD_segmentReduction * i);
 		}
@@ -236,7 +240,7 @@ int main()
 
 	Texture textures[]
 	{
-		Texture((texPath + "terrible.png").c_str(), "diffuse", 0, GL_RGBA, GL_UNSIGNED_BYTE)
+		Texture((texPath + "textures/bark_0.png").c_str(), "diffuse", 0, GL_RGBA, GL_UNSIGNED_BYTE)
 	};
 	
 	// Generates Shader object using shaders defualt.vert and default.frag
@@ -289,11 +293,6 @@ int main()
 		glm::vec3(0.0f, 2.0f, 0.0f),
 		glm::vec3(0.0f, -2.0f, 0.0f));
 
-	plantParams.Decay = 0.96f;
-	plantParams.ApicalBudExtinction = 0.05f;
-	plantParams.GrowthRate = 0.4f;
-	plantParams.RootCircumferenceEdges = 8;
-	plantParams.RootCurveSegments = 6;
 	Plant mainPlant = new Plant(plantParams);
 	Plants.push_back(&mainPlant);
 
@@ -410,11 +409,25 @@ int main()
 			break;
 		}
 
+		// Measure Rendering Time
+		GLuint queryID;
+		GLuint timeElapsed;
+		// Enable timer queries
+		glGenQueries(1, &queryID);
+		glBeginQuery(GL_TIME_ELAPSED, queryID);
+
 		// Draw the currently selected plant
 		if (Plants[plantIndex] != NULL)
 			Plants[plantIndex]->Draw(*shader, camera);
 
 		frameBuffer.Unbind();
+
+		// Retrieve the timestamp results
+		glEndQuery(GL_TIME_ELAPSED);
+		glGetQueryObjectuiv(queryID, GL_QUERY_RESULT, &timeElapsed);
+
+		// Convert ns to ms
+		gpuTime = timeElapsed;
 
 		ImGui::Begin("Plant Parameters");
 		ImGui::TextWrapped("Adjust the generated plant.");
@@ -431,24 +444,58 @@ int main()
 		if (ImGui::InputInt("Segment Reduction", &LOD_segmentReduction, 1))
 			LOD_segmentReduction = LOD_segmentReduction < 0 ? 0 : LOD_segmentReduction;
 		ImGui::PopItemWidth();
+		ImGui::Text("Environment Settings");
+		ImGui::PushItemWidth(150);
+		ImGui::Text("Light Direction");
+		ImGui::SetNextItemWidth(ImGui::GetWindowWidth() / 4.0f);
+		if (ImGui::InputFloat("X", &plantParams.lightDirection.x, 0.05f))
+			plantParams.lightDirection.x = clamp(plantParams.lightDirection.x, -1.0f, 1.0f);
+		ImGui::SameLine();
+		ImGui::SetNextItemWidth(ImGui::GetWindowWidth() / 4.0f);
+		if (ImGui::InputFloat("Y", &plantParams.lightDirection.y, 0.05f))
+			plantParams.lightDirection.y = clamp(plantParams.lightDirection.y, -1.0f, 1.0f);
+		ImGui::SameLine();
+		ImGui::SetNextItemWidth(ImGui::GetWindowWidth() / 4.0f);
+		if (ImGui::InputFloat("Z", &plantParams.lightDirection.z, 0.05f))
+			plantParams.lightDirection.z = clamp(plantParams.lightDirection.z, -1.0f, 1.0f);
 		ImGui::Text("Plant Settings");
 		ImGui::PushItemWidth(150);
 		/*plantParams.ApicalBudExtinction = 0.05f;
 		plantParams.GrowthRate = 0.6f;
 		plantParams.RootCircumferenceEdges = 8;
 		plantParams.RootCurveSegments = 6;*/
-		if (ImGui::InputFloat("Apical Bud Extinction", &plantParams.ApicalBudExtinction, 0.05f))
-			plantParams.ApicalBudExtinction = clamp(plantParams.ApicalBudExtinction, 0.05f, 1.0f);
-		if (ImGui::InputFloat("Growth Rate", &plantParams.GrowthRate, 0.05f))
-			plantParams.GrowthRate = clamp(plantParams.GrowthRate, 0.05f, 1.0f);
-		if (ImGui::InputFloat("Decay", &plantParams.Decay, 0.01f))
-			plantParams.Decay = clamp(plantParams.Decay, 0.01f, 1.0f);
+		if (ImGui::InputFloat("Apical Bud Extinction", &plantParams.ApicalBudExtinction, 0.01f))
+			plantParams.ApicalBudExtinction = clamp(plantParams.ApicalBudExtinction, 0.0f, 1.0f);
+		if (ImGui::InputFloat("Growth Rate", &plantParams.GrowthRate, 0.01f))
+			plantParams.GrowthRate = clamp(plantParams.GrowthRate, 0.00f, 1.0f);
 		if (ImGui::InputInt("Root Circumference Edges", &plantParams.RootCircumferenceEdges, 1))
 			plantParams.RootCircumferenceEdges = clamp(plantParams.RootCircumferenceEdges, 3, 256);
 		if (ImGui::InputInt("Root Curve Segments", &plantParams.RootCurveSegments, 1))
 			plantParams.RootCurveSegments = clamp(plantParams.RootCurveSegments, 1, 256);
 		if (ImGui::InputFloat("Root Width", &plantParams.RootWidth, 0.01f))
 			plantParams.RootWidth = clamp(plantParams.RootWidth, 0.01f, 5.0f);
+		if (ImGui::InputInt("Growth Time", &plantParams.maxAge, 1))
+			plantParams.t = clamp(plantParams.maxAge, 1, 100);
+		if (ImGui::InputFloat("Phototropism", &plantParams.Phototropism, 0.01f))
+			plantParams.Phototropism = clamp(plantParams.Phototropism, 0.0f, 1.0f);
+		if (ImGui::InputFloat("Gravitropism", &plantParams.Gravitropism, 0.01f))
+			plantParams.Gravitropism = clamp(plantParams.Gravitropism, 0.0f, 1.0f);
+
+		// Branch Params
+		ImGui::Text("Branch Settings");
+		ImGui::PushItemWidth(150);
+		if (ImGui::InputFloat("Apical Angle Variance", &plantParams.AAV, 0.1f))
+			plantParams.AAV = clamp(plantParams.AAV, 0.0f, 180.0f);
+		if (ImGui::InputFloat("Branch Angle Mean", &plantParams.BAM, 0.1f))
+			plantParams.BAM = clamp(plantParams.BAM, 0.0f, 90.0f);
+		if (ImGui::InputFloat("Branch Angle Variance", &plantParams.BAV, 0.1f))
+			plantParams.BAV = clamp(plantParams.BAV, 0.0f, 90.0f);
+		if (ImGui::InputFloat("Branch Roll Angle Mean", &plantParams.RAM, 0.1f))
+			plantParams.RAM = clamp(plantParams.RAM, 0.0f, 90.0f);
+		if (ImGui::InputFloat("Branch Roll Angle Variance", &plantParams.RAV, 0.1f))
+			plantParams.RAV = clamp(plantParams.RAV, 0.0f, 90.0f);
+		if (ImGui::InputInt("Foliage Type", &plantParams.foliageType, 1))
+			plantParams.foliageType = clamp(plantParams.foliageType, 0, 99);
 
 		ImGui::PopItemWidth();
 		ImGui::End();
@@ -481,7 +528,11 @@ int main()
 
 		ImGui::Begin("Scene");
 		{
+			std::ostringstream oss;
+			oss << "Rendering Time: " << gpuTime << " ns" << std::endl;
+			ImGui::Text(oss.str().c_str());
 			ImGui::BeginChild("SceneRender");
+
 			if (ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows) && ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
 				// Handle camera inputs and update its matrix to export to the vertex shader
 				MainWindowFocused = true;
