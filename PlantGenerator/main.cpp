@@ -85,6 +85,13 @@ std::vector<Plant*> Plants;
 GLuint gpuTime;
 
 void RegeneratePlants() {
+	// Measure Rendering Time
+	GLuint queryID;
+	GLuint timeElapsed;
+	// Enable timer queries
+	glGenQueries(1, &queryID);
+	glBeginQuery(GL_TIME_ELAPSED, queryID);
+
 	for (int i = 0; i < Plants.size(); i++) {
 		if (i == 0) {
 			Plants[i]->setParameters(plantParams);
@@ -97,6 +104,11 @@ void RegeneratePlants() {
 			Plants[i]->GenerateMesh(LOD_edgeReduction * i, LOD_segmentReduction * i);
 		}
 	}
+	// Retrieve the timestamp results
+	glEndQuery(GL_TIME_ELAPSED);
+	glGetQueryObjectuiv(queryID, GL_QUERY_RESULT, &timeElapsed);
+
+	std::cout << "[Info] Total time for generation: " << timeElapsed * 1e-6 << "ms" << std::endl;
 }
 
 void SaveCurrentPlant() {
@@ -496,6 +508,7 @@ int main()
 			plantParams.RAV = clamp(plantParams.RAV, 0.0f, 90.0f);
 		if (ImGui::InputInt("Foliage Type", &plantParams.foliageType, 1))
 			plantParams.foliageType = clamp(plantParams.foliageType, 0, 99);
+		ImGui::Checkbox("Unionise Branches", &plantParams.unioniseBranchMeshes);
 
 		ImGui::PopItemWidth();
 		ImGui::End();

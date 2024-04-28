@@ -142,6 +142,7 @@ struct PlantParameters {
 	int t = 0; // Growth time. Controls age and size. Current age of the tree
 
 	glm::vec3 lightDirection = glm::vec3(0.2f, -0.8f, 0.0f);
+	bool unioniseBranchMeshes = false;
 };
 
 
@@ -164,6 +165,7 @@ private:
 	PlantParameters parameters;
 	Node RootNode;
 	std::vector<Curve> curves;
+	std::vector<bool> unionCurve;
 };
 
 #endif

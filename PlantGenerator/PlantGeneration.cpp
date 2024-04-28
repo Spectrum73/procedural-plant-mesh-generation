@@ -182,31 +182,40 @@ void Plant::CopyGraph(Plant* copyTarget) {
 }
 
 // Creates a curve by passing in two nodes and the desired circumference subdivisions and number of segments.
-Curve makeCurveFromNodes(Node* firstNode, Node* secondNode, int aSubdivisions, int aSegments) {
+Curve makeCurveFromNodes(Node* firstNode, Node* secondNode, int aSubdivisions, int aSegments, bool unionise) {
+	bool willUnionise = unionise && firstNode->getPlant()->getParameters().unioniseBranchMeshes;
+
 	// We have to offset to add a slight overlap so that the boolean union operation detects they're connected
-	glm::vec3 offset = firstNode->getPosition() - secondNode->getPosition();
+	glm::vec3 offset = willUnionise ? (firstNode->getPosition() - secondNode->getPosition()) * 0.04f : glm::vec3(0);
 
 	// If the branch segment has no children then we make the tip have close to zero width (vertices will be cleaned up during merging later)
 	float tipWidth = secondNode->getChildren().size() > 0 ? secondNode->getWidth() : 0.0001f;
+	//float tipWidth = secondNode->getWidth();
 
 	return Curve(aSubdivisions, aSegments, firstNode->getWidth(), tipWidth,
-		firstNode->getPosition() ,//+ offset*0.03f,
+		firstNode->getPosition() + offset,
 		secondNode->getPosition(),
 		firstNode->getControlPoint(),
-		-secondNode->getControlPoint()); // This is inverted to make sure that connected curves match correctly
+		-secondNode->getControlPoint(), // This is inverted to make sure that connected curves match correctly
+		willUnionise); // Only add caps to union meshes
 }
 
 // this function will recursively append curves created from segments to a passed vector
-void addCurvesFromNode(Node* node, std::vector<Curve>& curves, int aEdgeReduction = 0, int aSegmentReduction = 0) {
+void addCurvesFromNode(Node* node, std::vector<Curve>& curves, std::vector<bool>& unionCurve, int aEdgeReduction = 0, int aSegmentReduction = 0) {
 	if (node != nullptr && !node->getChildren().empty()) {
 		PlantParameters pParams = node->getPlant()->getParameters();
+
+		int index = 0;
 		for (Node* childNode : node->getChildren()) {
 			int edges = node->getEdges() - aEdgeReduction;
 			edges = edges < 3 ? edges = 3 : edges; // Clamp to the minimum
 			int segments = node->getSegments() - aSegmentReduction;
 			segments = segments < 1 ? segments = 1 : segments; // Clamp to the minimum
-			curves.push_back(makeCurveFromNodes(node, childNode, edges, segments));
-			addCurvesFromNode(childNode, curves, aEdgeReduction, aSegmentReduction);
+			curves.push_back(makeCurveFromNodes(node, childNode, edges, segments, (index != 0)));
+			unionCurve.push_back(index != 0);
+			addCurvesFromNode(childNode, curves, unionCurve, aEdgeReduction, aSegmentReduction);
+
+			index++;
 		}
 	}
 }
@@ -320,20 +329,24 @@ void GenerateFoliage(Node* node, Mesh &baseMesh, int foliageType) {
 void Plant::GenerateMesh(int aEdgeReduction, int aSegmentReduction) {
 	if (this->curves.size() > 0) {
 		this->curves.clear();
+		this->unionCurve.clear();
 	}
 	// Clear our previous mesh
 	this->Delete();
 
 	if (&RootNode != nullptr)
-		addCurvesFromNode(&RootNode, this->curves, aEdgeReduction, aSegmentReduction);
+		addCurvesFromNode(&RootNode, this->curves, this->unionCurve, aEdgeReduction, aSegmentReduction);
 
 	// Concatenate all curve meshes to our main plant mesh
 	
+	int index = 0;
 	for (Curve& curve : this->curves)
 	{
-		this->Concatenate(curve);
+		this->Concatenate(curve, this->unionCurve[index] && parameters.unioniseBranchMeshes);
 		// Merge after every connection rather than at the end so that mesh cutting is cleaner and easier
 		MergeVerticesByDistance(0.03f);
+
+		index++;
 	}
 	if (&RootNode != nullptr)
 		GenerateFoliage(&RootNode, *this, parameters.foliageType);
