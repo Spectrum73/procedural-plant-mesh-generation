@@ -3,7 +3,7 @@ Individual Project for Year 3 Computer Science.
 
 ## Requirements
 The repository by itself includes all required libraries except from the MCUT library which is available at:
-https://github.com/cutdigital/mcut
+https://github.com/cutdigital/mcut \
 Details on its installation can be found via:
 https://cutdigital.github.io/mcut.site/building/
 
@@ -28,6 +28,6 @@ Three meshes will be saved for each tree with a suffix of `_0`, `_1` or `_2` den
 ### Plant Settings
 The "Regenerate" button will regenerate the current tree.
 LOD Level can be changed to alter the current LOD mesh being viewed for the tree.
-Light direction doesn't affect the lighting shader, but instead the direction of phototropism growth for the tree.
-
+Light direction doesn't affect the lighting shader, but instead the direction of phototropism growth for the tree. \
+\
 Details on other parameters can be found within the associated report for this project.
