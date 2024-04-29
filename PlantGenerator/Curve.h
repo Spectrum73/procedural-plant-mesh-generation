@@ -16,9 +16,9 @@ class Curve : public Bezier, public Mesh {
 private:
 	MeshData calculateMesh(int aSubdivisions, float startWidth, float endWidth, glm::vec3 a, glm::vec3 b, glm::vec3 c1, glm::vec3 c2, bool aCapped = false);
 public:
-	Curve(int aSubdivisions, int aSegments, float startWidth, float endWidth, glm::vec3 a, glm::vec3 b, glm::vec3 c1, glm::vec3 c2) : Bezier(aSegments, a, b, c1, c2), Mesh(calculateMesh(aSubdivisions, startWidth, endWidth, a, b, c1, c2, true)){}
-	Curve(int aSubdivisions, int aSegments, float startWidth, float endWidth, Bezier &bezier) 
-		: Bezier(bezier), Mesh(calculateMesh(aSubdivisions, startWidth, endWidth, bezier.getPoint(0), bezier.getPoint(1), bezier.getControlPoint(0), bezier.getControlPoint(1), true)) {}
+	Curve(int aSubdivisions, int aSegments, float startWidth, float endWidth, glm::vec3 a, glm::vec3 b, glm::vec3 c1, glm::vec3 c2, bool aCapped = false) : Bezier(aSegments, a, b, c1, c2), Mesh(calculateMesh(aSubdivisions, startWidth, endWidth, a, b, c1, c2, aCapped)){}
+	Curve(int aSubdivisions, int aSegments, float startWidth, float endWidth, Bezier &bezier, bool aCapped = false)
+		: Bezier(bezier), Mesh(calculateMesh(aSubdivisions, startWidth, endWidth, bezier.getPoint(0), bezier.getPoint(1), bezier.getControlPoint(0), bezier.getControlPoint(1), aCapped)) {}
 };
 
 #endif

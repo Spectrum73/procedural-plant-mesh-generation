@@ -49,14 +49,14 @@ void Plant::GenerateInternode(Node* parent) {
 	}
 
 	float dChance = tp == NodeType::APICAL_BUD ? parameters.ApicalBudExtinction : parameters.LateralBudExtinction;
-	float gChance = parent->getGrowthChance() * pow(parameters.InternodeAgeFactor, parameters.t);
+	float gChance = parent->getGrowthChance() * pow(parameters.InternodeAgeFactor, parameters.t) * 0.7f;
 
 	// Calculate the branch's direction and width
 	glm::vec3 branchDirection;
 	float w;
 	if (tp == NodeType::APICAL_BUD) // Apical bud
 	{
-		w = parent->getWidth()* getRandomFloat(0.6f, 0.8f);
+		w = parent->getWidth() * getRandomFloat(0.75f, 0.95f);
 
 		// Convert apical angle variance to radians
 		float AAVrad = parameters.AAV * glm::pi<float>() / 180.0f;
@@ -68,8 +68,8 @@ void Plant::GenerateInternode(Node* parent) {
 	}
 	else // Lateral bud
 	{
-		w = parent->getWidth()* getRandomFloat(0.2f, 0.4f);
-		if (w < 0.1f) w = 0.05f;
+		w = parent->getWidth() * getRandomFloat(0.75f, 0.9f);
+		if (w < 0.1f) w = 0.02f;
 
 		// Generate branch roll and angles
 		float branchingAngle;
@@ -108,10 +108,9 @@ void Plant::GenerateInternode(Node* parent) {
 
 	// Bending force calculation
 	// Gravitropism
-	glm::vec3 horizontalDirection = branchDirection;
+	glm::vec3 horizontalDirection = branchDirection * branchLength;
 	horizontalDirection.y = 0;
-	horizontalDirection = horizontalDirection * branchLength;
-	glm::vec3 bending = GRAVITY * parameters.Gravitropism * w * glm::length(horizontalDirection * branchLength);
+	glm::vec3 bending = GRAVITY * parameters.Gravitropism * (glm::length(horizontalDirection)) / w;
 	if (tp == LATERAL_BUD) {
 		branchDirection += bending;
 		branchDirection = glm::normalize(branchDirection);
@@ -123,8 +122,7 @@ void Plant::GenerateInternode(Node* parent) {
 
 	//glm::vec3 location = parent->getPosition() + glm::vec3(getRandomFloat(-0.9f, 0.9f), getRandomFloat(0.4f, 1.0f), getRandomFloat(-0.9f, 0.9f));
 	glm::vec3 location = parent->getPosition() + branchDirection * branchLength;
-	//glm::vec3 control = glm::vec3(0.0f, .5f, 0.0f);
-	glm::vec3 control = (parent->getPosition() - location) * -0.5f;
+	glm::vec3 control = (parent->getPosition() - location) * -0.5f + glm::vec3(0.0f, .15f, 0.0f);;
 
 	int edges = ResolveEdges(w, parent->getEdges());
 	int segments = ResolveSegments(glm::distance(location, parent->getPosition()), parent->getSegments());
@@ -136,12 +134,23 @@ void Plant::GenerateInternode(Node* parent) {
 // Recursive function to perform a growth cycle on a given node and its children
 void Plant::SimulateGrowthCycle(Node* node) {
 	float r = getRandomFloat(0.0f, 1.0f);
+
+	// Increase branch thickness
+	//node->setWidth(node->getWidth() + (parameters.RootWidth * pow(0.95f, parameters.t))*1.3f);
+	//float maxWidth = parameters.RootWidth * 3.0f;
+	//if (node->getWidth() > maxWidth) node->setWidth(maxWidth);
+
 	if (!node->isDead()) {
-		node->setGrowthChance(node->getGrowthChance() * parameters.InternodeAgeFactor);
+		node->setGrowthChance(node->getGrowthChance() * parameters.InternodeAgeFactor * parameters.InternodeAgeFactor);
+		node->setDeathChance(node->getDeathChance() / (parameters.InternodeAgeFactor));
 		node->setDead(r <= node->getDeathChance()); // Does the node die?
 		if (!node->isDead())
 			if (getRandomFloat(0.0f, 1.0f) <= node->getGrowthChance()) // Does this node grow a shoot
+			{
+				// Drastically reduce growth chance after creating a child
 				GenerateInternode(node);
+				node->setGrowthChance(node->getGrowthChance() * 0.4f);
+			}
 	}
 
 	if (!node->getChildren().empty()) {
@@ -178,35 +187,45 @@ void Plant::GenerateGraph() {
 }
 
 void Plant::CopyGraph(Plant* copyTarget) {
-	RootNode = *(new Node(&copyTarget->RootNode, this));
+	//RootNode = *(new Node(&copyTarget->RootNode, this));
+	RootNode = copyTarget->RootNode;
 }
 
 // Creates a curve by passing in two nodes and the desired circumference subdivisions and number of segments.
-Curve makeCurveFromNodes(Node* firstNode, Node* secondNode, int aSubdivisions, int aSegments) {
+Curve makeCurveFromNodes(Node* firstNode, Node* secondNode, int aSubdivisions, int aSegments, bool unionise) {
+	bool willUnionise = unionise && firstNode->getPlant()->getParameters().unioniseBranchMeshes;
+
 	// We have to offset to add a slight overlap so that the boolean union operation detects they're connected
-	glm::vec3 offset = firstNode->getPosition() - secondNode->getPosition();
+	glm::vec3 offset = willUnionise ? (firstNode->getPosition() - secondNode->getPosition()) * 0.04f : glm::vec3(0);
 
 	// If the branch segment has no children then we make the tip have close to zero width (vertices will be cleaned up during merging later)
 	float tipWidth = secondNode->getChildren().size() > 0 ? secondNode->getWidth() : 0.0001f;
+	//float tipWidth = secondNode->getWidth();
 
 	return Curve(aSubdivisions, aSegments, firstNode->getWidth(), tipWidth,
-		firstNode->getPosition() ,//+ offset*0.03f,
+		firstNode->getPosition() + offset,
 		secondNode->getPosition(),
 		firstNode->getControlPoint(),
-		-secondNode->getControlPoint()); // This is inverted to make sure that connected curves match correctly
+		-secondNode->getControlPoint(), // This is inverted to make sure that connected curves match correctly
+		willUnionise); // Only add caps to union meshes
 }
 
 // this function will recursively append curves created from segments to a passed vector
-void addCurvesFromNode(Node* node, std::vector<Curve>& curves, int aEdgeReduction = 0, int aSegmentReduction = 0) {
+void addCurvesFromNode(Node* node, std::vector<Curve>& curves, std::vector<bool>& unionCurve, int aEdgeReduction = 0, int aSegmentReduction = 0) {
 	if (node != nullptr && !node->getChildren().empty()) {
 		PlantParameters pParams = node->getPlant()->getParameters();
+
+		int index = 0;
 		for (Node* childNode : node->getChildren()) {
 			int edges = node->getEdges() - aEdgeReduction;
 			edges = edges < 3 ? edges = 3 : edges; // Clamp to the minimum
 			int segments = node->getSegments() - aSegmentReduction;
 			segments = segments < 1 ? segments = 1 : segments; // Clamp to the minimum
-			curves.push_back(makeCurveFromNodes(node, childNode, edges, segments));
-			addCurvesFromNode(childNode, curves, aEdgeReduction, aSegmentReduction);
+			curves.push_back(makeCurveFromNodes(node, childNode, edges, segments, (index != 0)));
+			unionCurve.push_back(index != 0);
+			addCurvesFromNode(childNode, curves, unionCurve, aEdgeReduction, aSegmentReduction);
+
+			index++;
 		}
 	}
 }
@@ -320,20 +339,24 @@ void GenerateFoliage(Node* node, Mesh &baseMesh, int foliageType) {
 void Plant::GenerateMesh(int aEdgeReduction, int aSegmentReduction) {
 	if (this->curves.size() > 0) {
 		this->curves.clear();
+		this->unionCurve.clear();
 	}
 	// Clear our previous mesh
 	this->Delete();
 
 	if (&RootNode != nullptr)
-		addCurvesFromNode(&RootNode, this->curves, aEdgeReduction, aSegmentReduction);
+		addCurvesFromNode(&RootNode, this->curves, this->unionCurve, aEdgeReduction, aSegmentReduction);
 
 	// Concatenate all curve meshes to our main plant mesh
 	
+	int index = 0;
 	for (Curve& curve : this->curves)
 	{
-		this->Concatenate(curve);
+		this->Concatenate(curve, this->unionCurve[index] && parameters.unioniseBranchMeshes);
 		// Merge after every connection rather than at the end so that mesh cutting is cleaner and easier
 		MergeVerticesByDistance(0.03f);
+
+		index++;
 	}
 	if (&RootNode != nullptr)
 		GenerateFoliage(&RootNode, *this, parameters.foliageType);
