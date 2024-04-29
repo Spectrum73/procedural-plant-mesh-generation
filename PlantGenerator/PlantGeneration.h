@@ -71,6 +71,7 @@ public:
 	void setGrowthChance(float chance) { growthChance = chance; }
 	glm::vec3 getPosition() { return localPosition; }
 	float getWidth() { return width; }
+	void setWidth(float value) { width = value; }
 	glm::vec3 getControlPoint() { return controlPoint; }
 	Plant* getPlant() { return plant; }
 	NodeType getType() { return type; }
@@ -108,15 +109,15 @@ struct PlantParameters {
 
 	float Decay = 0.96f;
 
-	float AAV = 25; // ApicalAngleVariance | Variance of the angular difference between the growth direction and the direction of the apical bud.
+	float AAV = 15; // ApicalAngleVariance | Variance of the angular difference between the growth direction and the direction of the apical bud.
 	int NLB; // NbLateralBuds | The number of lateral buds that are created per each node of a growing shoot.
-	float BAM = 41.0f; // Branching Angle Mean |
+	float BAM = 31.0f; // Branching Angle Mean |
 	float BAV = 3.0f; // Branching Angle Variance
 	float RAM = 59.0f; // Roll Angle Mean
-	float RAV = 2.0f; // Roll Angle Variance
+	float RAV = 15.0f; // Roll Angle Variance
 
 	float ApicalBudExtinction = 0.0f; // Probability that a given bud will die during a single growth cycle.
-	float LateralBudExtinction = 0.21f;
+	float LateralBudExtinction = 0.00f;
 	float ApicalLightFactor; // Influence of light on the growth probability of a bud.
 	float LateralLightFactor;
 	float ApicalDominance; // Control over Auxin factors in the plant.
@@ -124,19 +125,19 @@ struct PlantParameters {
 	float ApicalDominanceAgeFactor;
 	float GrowthRate = 0.2f; // The number of internodes generated on a single shoot duringone growth cycle.
 
-	float InternodeLength = 0.75f; // The base length of a single internode and its relation to the tree age
-	float InternodeAgeFactor = 0.98;
+	float InternodeLength = 0.95f; // The base length of a single internode and its relation to the tree age
+	float InternodeAgeFactor = 0.99;
 
 	float ApicalControlLevel; // The impact of the branch level on the growth rate and its relation to the tree age.
 	float ApicalControlAgeFactor;
 
-	float Phototropism = 0.12f; // The impact of the average direction of incoming light andgravity on the growth direction of a shoot.
-	float Gravitropism = 0.43f;
+	float Phototropism = 0.3f; // The impact of the average direction of incoming light andgravity on the growth direction of a shoot.
+	float Gravitropism = 0.002f;
 
 	float PruningFactor; // The impact of the amount of incoming light on the shedding of branches.
 	float LBPruningFactor; // LowBranchPruningFactor | The height below which all lateral branches are pruned.
 
-	int foliageType = 2;
+	int foliageType = 0;
 
 	int maxAge = 25;
 	int t = 0; // Growth time. Controls age and size. Current age of the tree

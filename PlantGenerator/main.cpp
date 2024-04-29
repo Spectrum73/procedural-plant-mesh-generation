@@ -478,6 +478,8 @@ int main()
 		plantParams.RootCurveSegments = 6;*/
 		if (ImGui::InputFloat("Apical Bud Extinction", &plantParams.ApicalBudExtinction, 0.01f))
 			plantParams.ApicalBudExtinction = clamp(plantParams.ApicalBudExtinction, 0.0f, 1.0f);
+		if (ImGui::InputFloat("Lateral Bud Extinction", &plantParams.LateralBudExtinction, 0.01f))
+			plantParams.LateralBudExtinction = clamp(plantParams.LateralBudExtinction, 0.0f, 1.0f);
 		if (ImGui::InputFloat("Growth Rate", &plantParams.GrowthRate, 0.01f))
 			plantParams.GrowthRate = clamp(plantParams.GrowthRate, 0.00f, 1.0f);
 		if (ImGui::InputInt("Root Circumference Edges", &plantParams.RootCircumferenceEdges, 1))
@@ -491,7 +493,7 @@ int main()
 		if (ImGui::InputFloat("Phototropism", &plantParams.Phototropism, 0.01f))
 			plantParams.Phototropism = clamp(plantParams.Phototropism, 0.0f, 1.0f);
 		if (ImGui::InputFloat("Gravitropism", &plantParams.Gravitropism, 0.01f))
-			plantParams.Gravitropism = clamp(plantParams.Gravitropism, 0.0f, 1.0f);
+			plantParams.Gravitropism = clamp(plantParams.Gravitropism, 0.0f, 30.0f);
 
 		// Branch Params
 		ImGui::Text("Branch Settings");
@@ -506,6 +508,12 @@ int main()
 			plantParams.RAM = clamp(plantParams.RAM, 0.0f, 90.0f);
 		if (ImGui::InputFloat("Branch Roll Angle Variance", &plantParams.RAV, 0.1f))
 			plantParams.RAV = clamp(plantParams.RAV, 0.0f, 90.0f);
+
+		if (ImGui::InputFloat("Internode Length", &plantParams.InternodeLength, 0.1f))
+			plantParams.InternodeLength = clamp(plantParams.InternodeLength, 0.0f, 10.0f);
+		if (ImGui::InputFloat("Internode Age Factor", &plantParams.InternodeAgeFactor, 0.01f))
+			plantParams.InternodeAgeFactor = clamp(plantParams.InternodeAgeFactor, 0.0f, 1.0f);
+
 		if (ImGui::InputInt("Foliage Type", &plantParams.foliageType, 1))
 			plantParams.foliageType = clamp(plantParams.foliageType, 0, 99);
 		ImGui::Checkbox("Unionise Branches", &plantParams.unioniseBranchMeshes);

@@ -49,14 +49,14 @@ void Plant::GenerateInternode(Node* parent) {
 	}
 
 	float dChance = tp == NodeType::APICAL_BUD ? parameters.ApicalBudExtinction : parameters.LateralBudExtinction;
-	float gChance = parent->getGrowthChance() * pow(parameters.InternodeAgeFactor, parameters.t);
+	float gChance = parent->getGrowthChance() * pow(parameters.InternodeAgeFactor, parameters.t) * 0.7f;
 
 	// Calculate the branch's direction and width
 	glm::vec3 branchDirection;
 	float w;
 	if (tp == NodeType::APICAL_BUD) // Apical bud
 	{
-		w = parent->getWidth()* getRandomFloat(0.6f, 0.8f);
+		w = parent->getWidth() * getRandomFloat(0.75f, 0.95f);
 
 		// Convert apical angle variance to radians
 		float AAVrad = parameters.AAV * glm::pi<float>() / 180.0f;
@@ -68,8 +68,8 @@ void Plant::GenerateInternode(Node* parent) {
 	}
 	else // Lateral bud
 	{
-		w = parent->getWidth()* getRandomFloat(0.2f, 0.4f);
-		if (w < 0.1f) w = 0.05f;
+		w = parent->getWidth() * getRandomFloat(0.75f, 0.9f);
+		if (w < 0.1f) w = 0.02f;
 
 		// Generate branch roll and angles
 		float branchingAngle;
@@ -108,10 +108,9 @@ void Plant::GenerateInternode(Node* parent) {
 
 	// Bending force calculation
 	// Gravitropism
-	glm::vec3 horizontalDirection = branchDirection;
+	glm::vec3 horizontalDirection = branchDirection * branchLength;
 	horizontalDirection.y = 0;
-	horizontalDirection = horizontalDirection * branchLength;
-	glm::vec3 bending = GRAVITY * parameters.Gravitropism * w * glm::length(horizontalDirection * branchLength);
+	glm::vec3 bending = GRAVITY * parameters.Gravitropism * (glm::length(horizontalDirection)) / w;
 	if (tp == LATERAL_BUD) {
 		branchDirection += bending;
 		branchDirection = glm::normalize(branchDirection);
@@ -123,8 +122,7 @@ void Plant::GenerateInternode(Node* parent) {
 
 	//glm::vec3 location = parent->getPosition() + glm::vec3(getRandomFloat(-0.9f, 0.9f), getRandomFloat(0.4f, 1.0f), getRandomFloat(-0.9f, 0.9f));
 	glm::vec3 location = parent->getPosition() + branchDirection * branchLength;
-	//glm::vec3 control = glm::vec3(0.0f, .5f, 0.0f);
-	glm::vec3 control = (parent->getPosition() - location) * -0.5f;
+	glm::vec3 control = (parent->getPosition() - location) * -0.5f + glm::vec3(0.0f, .15f, 0.0f);;
 
 	int edges = ResolveEdges(w, parent->getEdges());
 	int segments = ResolveSegments(glm::distance(location, parent->getPosition()), parent->getSegments());
@@ -136,12 +134,23 @@ void Plant::GenerateInternode(Node* parent) {
 // Recursive function to perform a growth cycle on a given node and its children
 void Plant::SimulateGrowthCycle(Node* node) {
 	float r = getRandomFloat(0.0f, 1.0f);
+
+	// Increase branch thickness
+	//node->setWidth(node->getWidth() + (parameters.RootWidth * pow(0.95f, parameters.t))*1.3f);
+	//float maxWidth = parameters.RootWidth * 3.0f;
+	//if (node->getWidth() > maxWidth) node->setWidth(maxWidth);
+
 	if (!node->isDead()) {
-		node->setGrowthChance(node->getGrowthChance() * parameters.InternodeAgeFactor);
+		node->setGrowthChance(node->getGrowthChance() * parameters.InternodeAgeFactor * parameters.InternodeAgeFactor);
+		node->setDeathChance(node->getDeathChance() / (parameters.InternodeAgeFactor));
 		node->setDead(r <= node->getDeathChance()); // Does the node die?
 		if (!node->isDead())
 			if (getRandomFloat(0.0f, 1.0f) <= node->getGrowthChance()) // Does this node grow a shoot
+			{
+				// Drastically reduce growth chance after creating a child
 				GenerateInternode(node);
+				node->setGrowthChance(node->getGrowthChance() * 0.4f);
+			}
 	}
 
 	if (!node->getChildren().empty()) {
@@ -178,7 +187,8 @@ void Plant::GenerateGraph() {
 }
 
 void Plant::CopyGraph(Plant* copyTarget) {
-	RootNode = *(new Node(&copyTarget->RootNode, this));
+	//RootNode = *(new Node(&copyTarget->RootNode, this));
+	RootNode = copyTarget->RootNode;
 }
 
 // Creates a curve by passing in two nodes and the desired circumference subdivisions and number of segments.
